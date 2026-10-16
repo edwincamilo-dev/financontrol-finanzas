@@ -2,10 +2,11 @@
   "name": "pruebas-unitarias",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
-    "test": "jest"
-  },
+  "start": "node src/index.js",
+  "test": "jest"
+},
   "keywords": [],
   "author": "",
   "license": "ISC",

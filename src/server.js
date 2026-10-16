@@ -4,8 +4,8 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-const pool = require('./database');
-const verificarToken = require('./auth');
+const pool = require('./config/database');
+const verificarToken = require('./middleware/auth');
 
 const app = express();
 

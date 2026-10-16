@@ -1,10 +1,22 @@
+# Dependencias
 node_modules/
+
+# Reportes de cobertura
+coverage/
+
+# Secretos y variables de entorno
 .env
 .env.*
 !.env.example
-coverage/
+
+# Logs
 *.log
+npm-debug.log*
+
+# Sistema operativo
 .DS_Store
 Thumbs.db
+
+# Editor
 .vscode/
 .idea/

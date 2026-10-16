@@ -1,4 +1,4 @@
-const calcularTotalCompra = require('./compra');
+const calcularTotalCompra = require('../src/services/compra');
 
 test('calcula correctamente una compra de dos productos', () => {
     expect(calcularTotalCompra(10000, 2)).toBe(20000);

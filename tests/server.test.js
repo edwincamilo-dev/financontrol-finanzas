@@ -1,8 +1,8 @@
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
 
-const app = require('./server');
-const pool = require('./database');
+const app = require('../src/server');
+const pool = require('../src/config/database');
 
 describe('API FinanControl', () => {
 
