@@ -74,6 +74,12 @@ export function render(modo, { alEntrar }) {
     });
 
     return h('main', { class: 'auth' },
+        // Portada decorativa (solo visual, oculta a lectores de pantalla).
+        h('div', { class: 'auth-hero', 'aria-hidden': 'true' },
+            h('p', { class: 'auth-kicker' }, 'Libro mayor personal · COP'),
+            h('p', { class: 'auth-titular' }, 'Cada peso,', h('br'), h('span', { class: 'tachado' }, 'perdido'), h('br'), h('em', null, 'bajo control.')),
+            h('ul', { class: 'auth-cinta' }, h('li', null, '+ Ingresos'), h('li', null, '− Gastos'), h('li', null, '= Saldo'))
+        ),
         h('section', { class: 'auth-tarjeta' },
             h('div', { class: 'marca' },
                 h('span', { class: 'logo', 'aria-hidden': 'true' }, '$'),

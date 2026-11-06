@@ -119,7 +119,8 @@ alCambiarCache((info) => {
 // ---------- Estructura general (menú lateral + barra superior) ----------
 
 function construirCarcasa() {
-    const iconos = { panel: '▦', ingresos: '↗', gastos: '↘', movimientos: '⇅', resumen: '∑', cache: '⚡', perfil: '☺' };
+    // Numeración tipo índice de libro mayor (decorativa).
+    const iconos = { panel: '01', ingresos: '02', gastos: '03', movimientos: '04', resumen: '05', cache: '06', perfil: '07' };
 
     const enlaces = Object.entries(RUTAS).map(([clave, { titulo }]) =>
         h('a', { href: `#/${clave}`, 'data-ruta': clave, 'data-testid': `nav-${clave}` },
