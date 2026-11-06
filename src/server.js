@@ -1,17 +1,46 @@
 require('dotenv').config();
 
+const path = require('path');
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const pool = require('./config/database');
 const verificarToken = require('./middleware/auth');
+const cacheMiddleware = require('./middleware/cache');
+const {
+    esFechaValida,
+    leerRangoFechas,
+    leerPaginacion,
+    condicionesBase,
+    normalizarMovimiento
+} = require('./utils/filtros');
 
 const app = express();
 
+app.disable('x-powered-by');
+
+// CORS: solo los orígenes de ALLOWED_ORIGINS (y el propio) pueden usar la API desde un navegador
+app.use(require('./middleware/cors'));
+
+// Frontend (carpeta public/). Sin "index": la ruta "/" decide abajo entre página y JSON.
+app.use(express.static(path.join(__dirname, '..', 'public'), { index: false }));
+
 app.use(express.json());
 
+// Caché de las consultas GET (se invalida solo al crear, editar o borrar)
+app.use('/api', cacheMiddleware);
+
+// Rutas que deben ir antes de las que usan /:id
+app.use(require('./routes/cache'));
+app.use(require('./routes/categorias'));
+
 app.get('/', async (req, res) => {
+    // Un navegador recibe la aplicación web; cualquier otro cliente (Postman, Cypress) recibe el JSON de estado.
+    if (req.accepts(['json', 'html']) === 'html') {
+        return res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+    }
+
     try {
         await pool.query('SELECT 1');
 
@@ -143,9 +172,15 @@ app.post('/api/ingresos', verificarToken, async (req, res) => {
             });
         }
 
-        if (Number(valor) <= 0) {
+        if (!(Number(valor) > 0)) {
             return res.status(400).json({
                 mensaje: 'El valor debe ser mayor que 0'
+            });
+        }
+
+        if (!esFechaValida(fecha)) {
+            return res.status(400).json({
+                mensaje: 'La fecha no es válida. Use el formato AAAA-MM-DD'
             });
         }
 
@@ -172,15 +207,46 @@ app.post('/api/ingresos', verificarToken, async (req, res) => {
 
 app.get('/api/ingresos', verificarToken, async (req, res) => {
     try {
-        const [ingresos] = await pool.query(
-            `SELECT id, descripcion, valor, fecha
-             FROM ingresos
-             WHERE usuario_id = ?
-             ORDER BY fecha DESC, id DESC`,
-            [req.usuario.id]
-        );
+        const rango = leerRangoFechas(req.query);
 
-        res.json(ingresos);
+        if (rango.error) {
+            return res.status(400).json({ mensaje: rango.error });
+        }
+
+        const paginacion = leerPaginacion(req.query);
+
+        if (paginacion.error) {
+            return res.status(400).json({ mensaje: paginacion.error });
+        }
+
+        const buscar = req.query.buscar ? String(req.query.buscar).trim() : undefined;
+        const { condiciones, params } = condicionesBase({ ...rango, buscar });
+        const where = ['usuario_id = ?', ...condiciones].join(' AND ');
+        const parametros = [req.usuario.id, ...params];
+
+        let consulta = `SELECT id, descripcion, valor, fecha
+             FROM ingresos
+             WHERE ${where}
+             ORDER BY fecha DESC, id DESC`;
+        let valores = parametros;
+
+        if (paginacion.paginar) {
+            const [conteo] = await pool.query(
+                `SELECT COUNT(*) AS total FROM ingresos WHERE ${where}`,
+                parametros
+            );
+
+            res.set('X-Total-Count', String(Number(conteo[0].total)));
+            res.set('X-Page', String(paginacion.pagina));
+            res.set('X-Limit', String(paginacion.limite));
+
+            consulta += ' LIMIT ? OFFSET ?';
+            valores = [...parametros, paginacion.limite, paginacion.offset];
+        }
+
+        const [ingresos] = await pool.query(consulta, valores);
+
+        res.json(ingresos.map(normalizarMovimiento));
 
     } catch (error) {
         console.error(error);
@@ -208,7 +274,7 @@ app.get('/api/ingresos/:id', verificarToken, async (req, res) => {
             });
         }
 
-        res.json(ingresos[0]);
+        res.json(normalizarMovimiento(ingresos[0]));
 
     } catch (error) {
         console.error(error);
@@ -230,9 +296,15 @@ app.put('/api/ingresos/:id', verificarToken, async (req, res) => {
             });
         }
 
-        if (Number(valor) <= 0) {
+        if (!(Number(valor) > 0)) {
             return res.status(400).json({
                 mensaje: 'El valor debe ser mayor que 0'
+            });
+        }
+
+        if (!esFechaValida(fecha)) {
+            return res.status(400).json({
+                mensaje: 'La fecha no es válida. Use el formato AAAA-MM-DD'
             });
         }
 
@@ -306,9 +378,15 @@ app.post('/api/gastos', verificarToken, async (req, res) => {
             });
         }
 
-        if (Number(valor) <= 0) {
+        if (!(Number(valor) > 0)) {
             return res.status(400).json({
                 mensaje: 'El valor debe ser mayor que 0'
+            });
+        }
+
+        if (!esFechaValida(fecha)) {
+            return res.status(400).json({
+                mensaje: 'La fecha no es válida. Use el formato AAAA-MM-DD'
             });
         }
 
@@ -333,49 +411,73 @@ app.post('/api/gastos', verificarToken, async (req, res) => {
     }
 });
 
-app.get('/api/gastos', verificarToken, async (req, res) => {
+// Lista de gastos con filtros opcionales: desde, hasta, buscar, categoria, pagina y limite
+async function consultarGastos(req, res, categoriaFija, mensajeError) {
     try {
-        const [gastos] = await pool.query(
-            `SELECT id, descripcion, valor, categoria, fecha
-             FROM gastos
-             WHERE usuario_id = ?
-             ORDER BY fecha DESC, id DESC`,
-            [req.usuario.id]
-        );
+        const rango = leerRangoFechas(req.query);
 
-        res.json(gastos);
+        if (rango.error) {
+            return res.status(400).json({ mensaje: rango.error });
+        }
+
+        const paginacion = leerPaginacion(req.query);
+
+        if (paginacion.error) {
+            return res.status(400).json({ mensaje: paginacion.error });
+        }
+
+        const buscar = req.query.buscar ? String(req.query.buscar).trim() : undefined;
+        const categoria = categoriaFija || (req.query.categoria ? String(req.query.categoria).trim() : undefined);
+        const { condiciones, params } = condicionesBase({ ...rango, buscar });
+
+        if (categoria) {
+            condiciones.push('categoria = ?');
+            params.push(categoria);
+        }
+
+        const where = ['usuario_id = ?', ...condiciones].join(' AND ');
+        const parametros = [req.usuario.id, ...params];
+
+        let consulta = `SELECT id, descripcion, valor, categoria, fecha
+             FROM gastos
+             WHERE ${where}
+             ORDER BY fecha DESC, id DESC`;
+        let valores = parametros;
+
+        if (paginacion.paginar) {
+            const [conteo] = await pool.query(
+                `SELECT COUNT(*) AS total FROM gastos WHERE ${where}`,
+                parametros
+            );
+
+            res.set('X-Total-Count', String(Number(conteo[0].total)));
+            res.set('X-Page', String(paginacion.pagina));
+            res.set('X-Limit', String(paginacion.limite));
+
+            consulta += ' LIMIT ? OFFSET ?';
+            valores = [...parametros, paginacion.limite, paginacion.offset];
+        }
+
+        const [gastos] = await pool.query(consulta, valores);
+
+        res.json(gastos.map(normalizarMovimiento));
 
     } catch (error) {
         console.error(error);
 
         res.status(500).json({
-            mensaje: 'Error al consultar los gastos'
+            mensaje: mensajeError
         });
     }
-});
+}
 
-app.get('/api/gastos/categoria/:categoria', verificarToken, async (req, res) => {
-    try {
-        const { categoria } = req.params;
+app.get('/api/gastos', verificarToken, (req, res) =>
+    consultarGastos(req, res, undefined, 'Error al consultar los gastos')
+);
 
-        const [gastos] = await pool.query(
-            `SELECT id, descripcion, valor, categoria, fecha
-             FROM gastos
-             WHERE categoria = ? AND usuario_id = ?
-             ORDER BY fecha DESC, id DESC`,
-            [categoria, req.usuario.id]
-        );
-
-        res.json(gastos);
-
-    } catch (error) {
-        console.error(error);
-
-        res.status(500).json({
-            mensaje: 'Error al consultar los gastos por categoría'
-        });
-    }
-});
+app.get('/api/gastos/categoria/:categoria', verificarToken, (req, res) =>
+    consultarGastos(req, res, req.params.categoria, 'Error al consultar los gastos por categoría')
+);
 
 app.get('/api/gastos/:id', verificarToken, async (req, res) => {
     try {
@@ -394,7 +496,7 @@ app.get('/api/gastos/:id', verificarToken, async (req, res) => {
             });
         }
 
-        res.json(gastos[0]);
+        res.json(normalizarMovimiento(gastos[0]));
 
     } catch (error) {
         console.error(error);
@@ -422,9 +524,15 @@ app.put('/api/gastos/:id', verificarToken, async (req, res) => {
             });
         }
 
-        if (Number(valor) <= 0) {
+        if (!(Number(valor) > 0)) {
             return res.status(400).json({
                 mensaje: 'El valor debe ser mayor que 0'
+            });
+        }
+
+        if (!esFechaValida(fecha)) {
+            return res.status(400).json({
+                mensaje: 'La fecha no es válida. Use el formato AAAA-MM-DD'
             });
         }
 
@@ -516,6 +624,35 @@ app.get('/api/saldo', verificarToken, async (req, res) => {
             mensaje: 'Error al calcular el saldo'
         });
     }
+});
+
+app.use('/api/usuarios', require('./routes/perfil'));
+app.use('/api/movimientos', require('./routes/movimientos'));
+app.use('/api/resumen', require('./routes/resumen'));
+
+// Documentación Swagger (/api-docs)
+app.use(require('./docs/swagger'));
+
+// Rutas inexistentes
+app.use((req, res) => {
+    res.status(404).json({
+        mensaje: 'Ruta no encontrada'
+    });
+});
+
+// Errores no controlados (por ejemplo, JSON mal formado en el cuerpo)
+app.use((error, req, res, next) => {
+    if (error.type === 'entity.parse.failed') {
+        return res.status(400).json({
+            mensaje: 'El cuerpo de la solicitud no es un JSON válido'
+        });
+    }
+
+    console.error(error);
+
+    res.status(500).json({
+        mensaje: 'Error interno del servidor'
+    });
 });
 
 module.exports = app;

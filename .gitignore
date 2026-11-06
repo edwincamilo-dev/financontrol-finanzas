@@ -20,3 +20,7 @@ Thumbs.db
 # Editor
 .vscode/
 .idea/
+# Resultados de Cypress
+cypress/screenshots/
+cypress/videos/
+cypress/downloads/

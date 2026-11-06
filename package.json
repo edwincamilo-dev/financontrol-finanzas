@@ -1,12 +1,16 @@
 {
   "name": "pruebas-unitarias",
   "version": "1.0.0",
-  "description": "",
+  "description": "FinanControl: API REST para la gestión de finanzas personales (ingresos, gastos, categorías, saldo y resúmenes)",
   "main": "src/index.js",
   "scripts": {
-  "start": "node src/index.js",
-  "test": "jest"
-},
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "cy:open": "cypress open",
+    "cy:run": "cypress run"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -21,5 +25,12 @@
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "mysql2": "^3.24.4"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/cypress/"
+    ]
   }
 }

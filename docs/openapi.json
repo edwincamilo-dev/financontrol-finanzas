@@ -1,0 +1,2562 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FinanControl API",
+    "version": "1.0.0",
+    "description": "API para la gestión de finanzas personales: ingresos, gastos, categorías, saldo y resúmenes. Las consultas GET usan caché por usuario (cabecera X-Cache) y ETag. Las fechas siempre son AAAA-MM-DD. Desde un navegador solo pueden usar la API los orígenes autorizados (CORS): cualquier otro origen recibe 403."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Desarrollo local"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Estado"
+    },
+    {
+      "name": "Usuarios"
+    },
+    {
+      "name": "Ingresos"
+    },
+    {
+      "name": "Gastos"
+    },
+    {
+      "name": "Categorías"
+    },
+    {
+      "name": "Movimientos"
+    },
+    {
+      "name": "Resumen"
+    },
+    {
+      "name": "Caché"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "tags": [
+          "Estado"
+        ],
+        "summary": "Comprueba que la API y la base de datos responden",
+        "responses": {
+          "200": {
+            "description": "API funcionando",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Estado"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Sin conexión con la base de datos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/usuarios/registro": {
+      "post": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Registra un usuario",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistroEntrada"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Usuario creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Campos faltantes o correo ya registrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/usuarios/login": {
+      "post": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Inicia sesión y entrega un token JWT (2 horas)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginEntrada"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sesión iniciada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginRespuesta"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Faltan datos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Correo o contraseña incorrectos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/usuarios/perfil": {
+      "get": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Consulta el perfil del usuario autenticado",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Perfil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Perfil"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token requerido, con formato inválido o vencido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Usuario no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Edita nombre y/o correo (entrega un token nuevo)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PerfilEntrada"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Perfil actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PerfilActualizado"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos o correo repetido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token requerido, con formato inválido o vencido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Usuario no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/usuarios/password": {
+      "put": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Cambia la contraseña",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordEntrada"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contraseña actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token inválido o contraseña actual incorrecta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Usuario no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/usuarios/cuenta": {
+      "delete": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Elimina la cuenta con todos sus ingresos y gastos",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EliminarCuentaEntrada"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cuenta eliminada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Falta la contraseña",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token inválido o contraseña incorrecta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Usuario no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prueba-seguridad": {
+      "get": {
+        "tags": [
+          "Estado"
+        ],
+        "summary": "Comprueba que el token es válido",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Acceso autorizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PruebaSeguridad"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token requerido, con formato inválido o vencido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ingresos": {
+      "post": {
+        "tags": [
+          "Ingresos"
+        ],
+        "summary": "Registra un ingreso",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngresoEntrada"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Ingreso creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Creado"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos obligatorios, valor o fecha inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token requerido, con formato inválido o vencido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Ingresos"
+        ],
+        "summary": "Lista los ingresos (filtros y paginación opcionales)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "desde",
+            "in": "query",
+            "required": false,
+            "description": "Fecha inicial (AAAA-MM-DD), inclusive",
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-01-31"
+            }
+          },
+          {
+            "name": "hasta",
+            "in": "query",
+            "required": false,
+            "description": "Fecha final (AAAA-MM-DD), inclusive",
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-01-31"
+            }
+          },
+          {
+            "name": "buscar",
+            "in": "query",
+            "required": false,
+            "description": "Texto contenido en la descripción",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagina",
+            "in": "query",
+            "required": false,
+            "description": "Número de página (desde 1). Activa la paginación",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "required": false,
+            "description": "Elementos por página (1 a 100). Activa la paginación",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de ingresos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Ingreso"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "X-Total-Count": {
+                "description": "Total de registros (solo si se pagina)",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Page": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Limit": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Cache": {
+                "description": "HIT si salió del caché, MISS si se consultó la base de datos",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "HIT",
+                    "MISS"
+                  ]
+                }
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Filtros inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token requerido, con formato inválido o vencido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ingresos/{id}": {
+      "get": {
+        "tags": [
+          "Ingresos"
+        ],
+        "summary": "Consulta un ingreso",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ingreso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ingreso"
+                }
+              }
+            },
+            "headers": {
+              "X-Cache": {
+                "description": "HIT si salió del caché, MISS si se consultó la base de datos",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "HIT",
+                    "MISS"
+                  ]
+                }
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token requerido, con formato inválido o vencido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ingreso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Ingresos"
+        ],
+        "summary": "Modifica un ingreso",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngresoEntrada"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ingreso actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token requerido, con formato inválido o vencido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ingreso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Ingresos"
+        ],
+        "summary": "Elimina un ingreso",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ingreso eliminado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token requerido, con formato inválido o vencido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ingreso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/gastos": {
+      "post": {
+        "tags": [
+          "Gastos"
+        ],
+        "summary": "Registra un gasto",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GastoEntrada"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Gasto creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Creado"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos obligatorios, valor o fecha inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token requerido, con formato inválido o vencido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Gastos"
+        ],
+        "summary": "Lista los gastos (filtros y paginación opcionales)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "desde",
+            "in": "query",
+            "required": false,
+            "description": "Fecha inicial (AAAA-MM-DD), inclusive",
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-01-31"
+            }
+          },
+          {
+            "name": "hasta",
+            "in": "query",
+            "required": false,
+            "description": "Fecha final (AAAA-MM-DD), inclusive",
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-01-31"
+            }
+          },
+          {
+            "name": "buscar",
+            "in": "query",
+            "required": false,
+            "description": "Texto contenido en la descripción",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "categoria",
+            "in": "query",
+            "required": false,
+            "description": "Categoría exacta",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagina",
+            "in": "query",
+            "required": false,
+            "description": "Número de página (desde 1). Activa la paginación",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "required": false,
+            "description": "Elementos por página (1 a 100). Activa la paginación",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de gastos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Gasto"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "X-Total-Count": {
+                "description": "Total de registros (solo si se pagina)",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Page": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Limit": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Cache": {
+                "description": "HIT si salió del caché, MISS si se consultó la base de datos",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "HIT",
+                    "MISS"
+                  ]
+                }
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Filtros inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token requerido, con formato inválido o vencido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/gastos/categorias": {
+      "get": {
+        "tags": [
+          "Categorías"
+        ],
+        "summary": "Categorías usadas, con cantidad, total y porcentaje",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "desde",
+            "in": "query",
+            "required": false,
+            "description": "Fecha inicial (AAAA-MM-DD), inclusive",
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-01-31"
+            }
+          },
+          {
+            "name": "hasta",
+            "in": "query",
+            "required": false,
+            "description": "Fecha final (AAAA-MM-DD), inclusive",
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-01-31"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Categorías",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResumenCategoria"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "X-Cache": {
+                "description": "HIT si salió del caché, MISS si se consultó la base de datos",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "HIT",
+                    "MISS"
+                  ]
+                }
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Fechas inválidas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token requerido, con formato inválido o vencido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/gastos/categoria/{categoria}": {
+      "get": {
+        "tags": [
+          "Categorías"
+        ],
+        "summary": "Gastos de una categoría",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "categoria",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "desde",
+            "in": "query",
+            "required": false,
+            "description": "Fecha inicial (AAAA-MM-DD), inclusive",
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-01-31"
+            }
+          },
+          {
+            "name": "hasta",
+            "in": "query",
+            "required": false,
+            "description": "Fecha final (AAAA-MM-DD), inclusive",
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-01-31"
+            }
+          },
+          {
+            "name": "buscar",
+            "in": "query",
+            "required": false,
+            "description": "Texto contenido en la descripción",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagina",
+            "in": "query",
+            "required": false,
+            "description": "Número de página (desde 1). Activa la paginación",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "required": false,
+            "description": "Elementos por página (1 a 100). Activa la paginación",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Gastos de la categoría",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Gasto"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "X-Total-Count": {
+                "description": "Total de registros (solo si se pagina)",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Page": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Limit": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Cache": {
+                "description": "HIT si salió del caché, MISS si se consultó la base de datos",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "HIT",
+                    "MISS"
+                  ]
+                }
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Filtros inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token requerido, con formato inválido o vencido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/gastos/{id}": {
+      "get": {
+        "tags": [
+          "Gastos"
+        ],
+        "summary": "Consulta un gasto",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Gasto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Gasto"
+                }
+              }
+            },
+            "headers": {
+              "X-Cache": {
+                "description": "HIT si salió del caché, MISS si se consultó la base de datos",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "HIT",
+                    "MISS"
+                  ]
+                }
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token requerido, con formato inválido o vencido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Gasto no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Gastos"
+        ],
+        "summary": "Modifica un gasto",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GastoEntrada"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Gasto actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token requerido, con formato inválido o vencido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Gasto no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Gastos"
+        ],
+        "summary": "Elimina un gasto",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Gasto eliminado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token requerido, con formato inválido o vencido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Gasto no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/saldo": {
+      "get": {
+        "tags": [
+          "Resumen"
+        ],
+        "summary": "Total de ingresos, total de gastos y saldo disponible",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Saldo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Saldo"
+                }
+              }
+            },
+            "headers": {
+              "X-Cache": {
+                "description": "HIT si salió del caché, MISS si se consultó la base de datos",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "HIT",
+                    "MISS"
+                  ]
+                }
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token requerido, con formato inválido o vencido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/movimientos": {
+      "get": {
+        "tags": [
+          "Movimientos"
+        ],
+        "summary": "Ingresos y gastos juntos, del más reciente al más antiguo",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "desde",
+            "in": "query",
+            "required": false,
+            "description": "Fecha inicial (AAAA-MM-DD), inclusive",
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-01-31"
+            }
+          },
+          {
+            "name": "hasta",
+            "in": "query",
+            "required": false,
+            "description": "Fecha final (AAAA-MM-DD), inclusive",
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-01-31"
+            }
+          },
+          {
+            "name": "tipo",
+            "in": "query",
+            "required": false,
+            "description": "Solo ingresos o solo gastos",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ingreso",
+                "gasto"
+              ]
+            }
+          },
+          {
+            "name": "categoria",
+            "in": "query",
+            "required": false,
+            "description": "Solo gastos de esta categoría",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "buscar",
+            "in": "query",
+            "required": false,
+            "description": "Texto contenido en la descripción",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagina",
+            "in": "query",
+            "required": false,
+            "description": "Número de página (desde 1). Activa la paginación",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "required": false,
+            "description": "Elementos por página (1 a 100). Activa la paginación",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Movimientos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Movimiento"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "X-Total-Count": {
+                "description": "Total de registros (solo si se pagina)",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Page": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Limit": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Cache": {
+                "description": "HIT si salió del caché, MISS si se consultó la base de datos",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "HIT",
+                    "MISS"
+                  ]
+                }
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Filtros inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token requerido, con formato inválido o vencido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/movimientos/exportar": {
+      "get": {
+        "tags": [
+          "Movimientos"
+        ],
+        "summary": "Exporta los movimientos filtrados a CSV",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "desde",
+            "in": "query",
+            "required": false,
+            "description": "Fecha inicial (AAAA-MM-DD), inclusive",
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-01-31"
+            }
+          },
+          {
+            "name": "hasta",
+            "in": "query",
+            "required": false,
+            "description": "Fecha final (AAAA-MM-DD), inclusive",
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-01-31"
+            }
+          },
+          {
+            "name": "tipo",
+            "in": "query",
+            "required": false,
+            "description": "Solo ingresos o solo gastos",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ingreso",
+                "gasto"
+              ]
+            }
+          },
+          {
+            "name": "categoria",
+            "in": "query",
+            "required": false,
+            "description": "Solo gastos de esta categoría",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "buscar",
+            "in": "query",
+            "required": false,
+            "description": "Texto contenido en la descripción",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Archivo CSV (UTF-8)",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Filtros inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token requerido, con formato inválido o vencido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/resumen": {
+      "get": {
+        "tags": [
+          "Resumen"
+        ],
+        "summary": "Resumen financiero de un periodo con gastos por categoría",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "desde",
+            "in": "query",
+            "required": false,
+            "description": "Fecha inicial (AAAA-MM-DD), inclusive",
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-01-31"
+            }
+          },
+          {
+            "name": "hasta",
+            "in": "query",
+            "required": false,
+            "description": "Fecha final (AAAA-MM-DD), inclusive",
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-01-31"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resumen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Resumen"
+                }
+              }
+            },
+            "headers": {
+              "X-Cache": {
+                "description": "HIT si salió del caché, MISS si se consultó la base de datos",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "HIT",
+                    "MISS"
+                  ]
+                }
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Fechas inválidas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token requerido, con formato inválido o vencido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/resumen/mensual": {
+      "get": {
+        "tags": [
+          "Resumen"
+        ],
+        "summary": "Resumen mes a mes de un año",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "anio",
+            "in": "query",
+            "required": false,
+            "description": "Año (por defecto el actual)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resumen mensual",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumenMensual"
+                }
+              }
+            },
+            "headers": {
+              "X-Cache": {
+                "description": "HIT si salió del caché, MISS si se consultó la base de datos",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "HIT",
+                    "MISS"
+                  ]
+                }
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Año inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token requerido, con formato inválido o vencido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cache/estadisticas": {
+      "get": {
+        "tags": [
+          "Caché"
+        ],
+        "summary": "Estadísticas del caché del usuario",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estadísticas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstadisticasCache"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token requerido, con formato inválido o vencido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cache": {
+      "delete": {
+        "tags": [
+          "Caché"
+        ],
+        "summary": "Invalida el caché del usuario",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Caché invalidado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CacheInvalidado"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token requerido, con formato inválido o vencido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Mensaje": {
+        "type": "object",
+        "properties": {
+          "mensaje": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "mensaje"
+        ]
+      },
+      "Creado": {
+        "type": "object",
+        "properties": {
+          "mensaje": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "mensaje",
+          "id"
+        ]
+      },
+      "Estado": {
+        "type": "object",
+        "properties": {
+          "mensaje": {
+            "type": "string"
+          },
+          "baseDatos": {
+            "type": "string",
+            "enum": [
+              "Conectada"
+            ]
+          }
+        },
+        "required": [
+          "mensaje",
+          "baseDatos"
+        ]
+      },
+      "PruebaSeguridad": {
+        "type": "object",
+        "properties": {
+          "mensaje": {
+            "type": "string"
+          },
+          "usuario": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "correo": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "required": [
+          "mensaje",
+          "usuario"
+        ]
+      },
+      "RegistroEntrada": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "nombre",
+          "correo",
+          "password"
+        ]
+      },
+      "LoginEntrada": {
+        "type": "object",
+        "properties": {
+          "correo": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "correo",
+          "password"
+        ]
+      },
+      "LoginRespuesta": {
+        "type": "object",
+        "properties": {
+          "mensaje": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "mensaje",
+          "token"
+        ]
+      },
+      "Perfil": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "correo"
+        ]
+      },
+      "PerfilEntrada": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string",
+            "format": "email"
+          }
+        }
+      },
+      "PerfilActualizado": {
+        "type": "object",
+        "properties": {
+          "mensaje": {
+            "type": "string"
+          },
+          "usuario": {
+            "$ref": "#/components/schemas/Perfil"
+          },
+          "token": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "mensaje",
+          "usuario",
+          "token"
+        ]
+      },
+      "PasswordEntrada": {
+        "type": "object",
+        "properties": {
+          "passwordActual": {
+            "type": "string"
+          },
+          "passwordNueva": {
+            "type": "string",
+            "minLength": 6
+          }
+        },
+        "required": [
+          "passwordActual",
+          "passwordNueva"
+        ]
+      },
+      "EliminarCuentaEntrada": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "password"
+        ]
+      },
+      "IngresoEntrada": {
+        "type": "object",
+        "properties": {
+          "descripcion": {
+            "type": "string"
+          },
+          "valor": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-01-31"
+          }
+        },
+        "required": [
+          "descripcion",
+          "valor",
+          "fecha"
+        ]
+      },
+      "Ingreso": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "valor": {
+            "type": "number"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-01-31"
+          }
+        },
+        "required": [
+          "id",
+          "descripcion",
+          "valor",
+          "fecha"
+        ]
+      },
+      "GastoEntrada": {
+        "type": "object",
+        "properties": {
+          "descripcion": {
+            "type": "string"
+          },
+          "valor": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "categoria": {
+            "type": "string"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-01-31"
+          }
+        },
+        "required": [
+          "descripcion",
+          "valor",
+          "categoria",
+          "fecha"
+        ]
+      },
+      "Gasto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "valor": {
+            "type": "number"
+          },
+          "categoria": {
+            "type": "string"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-01-31"
+          }
+        },
+        "required": [
+          "id",
+          "descripcion",
+          "valor",
+          "categoria",
+          "fecha"
+        ]
+      },
+      "Movimiento": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "ingreso",
+              "gasto"
+            ]
+          },
+          "id": {
+            "type": "integer"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "valor": {
+            "type": "number"
+          },
+          "categoria": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-01-31"
+          }
+        },
+        "required": [
+          "tipo",
+          "id",
+          "descripcion",
+          "valor",
+          "categoria",
+          "fecha"
+        ]
+      },
+      "Saldo": {
+        "type": "object",
+        "properties": {
+          "totalIngresos": {
+            "type": "number"
+          },
+          "totalGastos": {
+            "type": "number"
+          },
+          "saldo": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "totalIngresos",
+          "totalGastos",
+          "saldo"
+        ]
+      },
+      "ResumenCategoria": {
+        "type": "object",
+        "properties": {
+          "categoria": {
+            "type": "string"
+          },
+          "cantidad": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "number"
+          },
+          "porcentaje": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "categoria",
+          "cantidad",
+          "total",
+          "porcentaje"
+        ]
+      },
+      "Resumen": {
+        "type": "object",
+        "properties": {
+          "periodo": {
+            "type": "object",
+            "properties": {
+              "desde": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "hasta": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "desde",
+              "hasta"
+            ]
+          },
+          "totalIngresos": {
+            "type": "number"
+          },
+          "totalGastos": {
+            "type": "number"
+          },
+          "saldo": {
+            "type": "number"
+          },
+          "cantidadIngresos": {
+            "type": "integer"
+          },
+          "cantidadGastos": {
+            "type": "integer"
+          },
+          "gastosPorCategoria": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResumenCategoria"
+            }
+          }
+        },
+        "required": [
+          "periodo",
+          "totalIngresos",
+          "totalGastos",
+          "saldo",
+          "cantidadIngresos",
+          "cantidadGastos",
+          "gastosPorCategoria"
+        ]
+      },
+      "ResumenMensual": {
+        "type": "object",
+        "properties": {
+          "anio": {
+            "type": "integer"
+          },
+          "totalIngresos": {
+            "type": "number"
+          },
+          "totalGastos": {
+            "type": "number"
+          },
+          "saldo": {
+            "type": "number"
+          },
+          "meses": {
+            "type": "array",
+            "minItems": 12,
+            "maxItems": 12,
+            "items": {
+              "type": "object",
+              "properties": {
+                "mes": {
+                  "type": "integer"
+                },
+                "nombre": {
+                  "type": "string"
+                },
+                "ingresos": {
+                  "type": "number"
+                },
+                "gastos": {
+                  "type": "number"
+                },
+                "saldo": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "mes",
+                "nombre",
+                "ingresos",
+                "gastos",
+                "saldo"
+              ]
+            }
+          }
+        },
+        "required": [
+          "anio",
+          "totalIngresos",
+          "totalGastos",
+          "saldo",
+          "meses"
+        ]
+      },
+      "EstadisticasCache": {
+        "type": "object",
+        "properties": {
+          "activo": {
+            "type": "boolean"
+          },
+          "entradas": {
+            "type": "integer"
+          },
+          "hits": {
+            "type": "integer"
+          },
+          "misses": {
+            "type": "integer"
+          },
+          "invalidaciones": {
+            "type": "integer"
+          },
+          "tasaAcierto": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "activo",
+          "entradas",
+          "hits",
+          "misses",
+          "invalidaciones",
+          "tasaAcierto"
+        ]
+      },
+      "CacheInvalidado": {
+        "type": "object",
+        "properties": {
+          "mensaje": {
+            "type": "string"
+          },
+          "entradasEliminadas": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "mensaje",
+          "entradasEliminadas"
+        ]
+      }
+    }
+  }
+}
