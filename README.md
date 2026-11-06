@@ -289,4 +289,4 @@ Node.js · Express 5 · MySQL (`mysql2`) · JWT (`jsonwebtoken`) · bcryptjs · 
 
 ## Equipo
 
-Juan David Moreno · Edwin Camilo Pipicano · Cesar Andres Pelaez
+Juan David Moreno · Edwin Camilo · Cesar Andres Pelaez
