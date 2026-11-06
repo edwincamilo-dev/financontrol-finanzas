@@ -16,8 +16,8 @@ API REST en **Node.js + Express** para la **gestión de finanzas personales**: c
 ## 1. Descargar el proyecto
 
 ```bash
-git clone https://github.com/edwincamilo-dev/pruebas-unitarias.git
-cd pruebas-unitarias
+git clone https://github.com/edwincamilo-dev/financontrol-finanzas.git
+cd financontrol-finanzas
 ```
 
 > Si no tienes Git, en la página del repositorio pulsa **Code → Download ZIP**, descomprime y abre la terminal dentro de la carpeta.
@@ -243,7 +243,7 @@ Las consultas `GET` usan un caché en memoria (estrategia *Cache-Aside*):
 ## Estructura del proyecto
 
 ```
-pruebas-unitarias/
+financontrol-finanzas/
 ├── src/
 │   ├── config/database.js      # Conexión a MySQL
 │   ├── docs/swagger.js         # Documentación Swagger en /api-docs
@@ -289,4 +289,4 @@ Node.js · Express 5 · MySQL (`mysql2`) · JWT (`jsonwebtoken`) · bcryptjs · 
 
 ## Equipo
 
-Juan David Moreno · Edwin Camilo 
+Juan David Moreno · Edwin Camilo Pipicano · Cesar Andres Pelaez

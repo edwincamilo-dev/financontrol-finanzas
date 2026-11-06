@@ -1,5 +1,5 @@
 {
-  "name": "pruebas-unitarias",
+  "name": "financontrol-finanzas",
   "version": "1.0.0",
   "description": "FinanControl: API REST para la gestión de finanzas personales (ingresos, gastos, categorías, saldo y resúmenes)",
   "main": "src/index.js",
