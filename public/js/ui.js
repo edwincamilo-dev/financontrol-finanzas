@@ -136,6 +136,27 @@ export function fechaLarga(iso) {
     return new Date(anio, mes - 1, dia).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+const formatoCorto = new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'short', year: 'numeric' });
+
+// "2026-11-05" → "5 nov 2026" (día sin cero, mes abreviado en minúscula y sin punto, año).
+// Para las tarjetas del celular, donde la fecha larga no deja espacio a la categoría.
+export function fechaCorta(iso) {
+    const [anio, mes, dia] = String(iso).slice(0, 10).split('-').map(Number);
+    const partes = Object.fromEntries(
+        formatoCorto.formatToParts(new Date(anio, mes - 1, dia)).map(({ type, value }) => [type, value])
+    );
+
+    return `${partes.day} ${partes.month.replace('.', '').toLocaleLowerCase('es')} ${partes.year}`;
+}
+
+// Celda de fecha de las tablas: la larga se ve en escritorio y la corta en celular (lo decide el CSS).
+export function contenidoFecha(iso) {
+    return [
+        h('span', { class: 'fecha-larga' }, fechaLarga(iso)),
+        h('span', { class: 'fecha-corta' }, fechaCorta(iso))
+    ];
+}
+
 export function inicioDeMes(desplazamiento = 0) {
     const ahora = new Date();
 

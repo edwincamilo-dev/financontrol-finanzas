@@ -1,6 +1,6 @@
 // Movimientos: ingresos y gastos juntos, con filtros, paginación y exportación a CSV.
 
-import { h, icono, dinero, fechaLarga, aviso, conEspera, cargando, vacio, tarjetaError } from '../ui.js';
+import { h, icono, dinero, contenidoFecha, aviso, conEspera, cargando, vacio, tarjetaError } from '../ui.js';
 import { api, apiLista, descargar } from '../api.js';
 import { formularioFiltros, paginacion } from './comun.js';
 
@@ -92,7 +92,7 @@ export async function render() {
                             h('tbody', null,
                                 items.map((m) =>
                                     h('tr', { 'data-testid': 'fila' },
-                                        h('td', { class: 'fecha', 'data-etiqueta': 'Fecha' }, fechaLarga(m.fecha)),
+                                        h('td', { class: 'fecha', 'data-etiqueta': 'Fecha' }, contenidoFecha(m.fecha)),
                                         h('td', { class: 'tipo', 'data-etiqueta': 'Tipo' }, h('span', { class: `insignia insignia-${m.tipo}` }, m.tipo === 'ingreso' ? 'Ingreso' : 'Gasto')),
                                         h('td', { class: 'descripcion', 'data-etiqueta': 'Descripción' }, m.descripcion),
                                         h('td', { class: m.categoria ? 'categoria' : 'categoria sin-categoria', 'data-etiqueta': 'Categoría' },

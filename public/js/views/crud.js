@@ -1,6 +1,6 @@
 // Vista de lista con alta, edición y baja. Sirve tanto para ingresos como para gastos.
 
-import { h, icono, plural, campo, dinero, fechaLarga, hoy, modal, confirmar, aviso, conEspera, cargando, vacio, tarjetaError } from '../ui.js';
+import { h, icono, plural, campo, dinero, contenidoFecha, hoy, modal, confirmar, aviso, conEspera, cargando, vacio, tarjetaError } from '../ui.js';
 import { api, apiLista } from '../api.js';
 import { formularioFiltros, paginacion } from './comun.js';
 
@@ -115,7 +115,7 @@ export function crearVista(config) {
                         h('tbody', null,
                             items.map((item) =>
                                 h('tr', { 'data-testid': 'fila' },
-                                    h('td', { class: 'fecha', 'data-etiqueta': 'Fecha' }, fechaLarga(item.fecha)),
+                                    h('td', { class: 'fecha', 'data-etiqueta': 'Fecha' }, contenidoFecha(item.fecha)),
                                     h('td', { class: 'descripcion', 'data-etiqueta': 'Descripción' }, item.descripcion),
                                     conCategoria
                                         ? h('td', { class: 'categoria', 'data-etiqueta': 'Categoría' }, h('span', { class: item.categoria === categoriaMayor ? 'pastilla pastilla-destacada' : 'pastilla pastilla-gris' }, item.categoria))

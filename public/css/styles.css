@@ -374,6 +374,8 @@ select {
 .tabla td { border-bottom: 1px solid var(--renglon); }
 .tabla td.descripcion { white-space: normal; min-width: 160px; font-weight: 500; }
 .tabla td.fecha { color: var(--nota); }
+/* La fecha corta ("5 nov 2026") solo se usa en las tarjetas del celular */
+.fecha-corta { display: none; }
 .tabla tbody tr:hover td { background: var(--mostaza-tenue); }
 .tabla .num { text-align: right; }
 .tabla td.num { font-weight: 600; }
@@ -871,7 +873,9 @@ select {
   }
   .tabla-tarjetas td.descripcion { grid-area: descripcion; min-width: 0; font-weight: 600; padding-right: 12px; }
   .tabla-tarjetas td.celda-valor { grid-area: valor; align-self: start; white-space: nowrap; }
-  .tabla-tarjetas td.fecha { grid-area: fecha; margin-right: 10px; font-size: 14px; }
+  .tabla-tarjetas td.fecha { grid-area: fecha; margin-right: 10px; font-size: 14px; white-space: nowrap; }
+  .tabla-tarjetas .fecha-larga { display: none; }
+  .tabla-tarjetas .fecha-corta { display: inline; }
   .tabla-tarjetas td.tipo { grid-area: tipo; margin-right: 8px; }
   .tabla-tarjetas td.categoria { grid-area: categoria; justify-self: start; }
   .tabla-tarjetas td.sin-categoria { display: none; }
