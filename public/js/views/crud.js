@@ -102,7 +102,7 @@ export function crearVista(config) {
 
             function tabla(items) {
                 return h('div', { class: 'tabla-contenedor' },
-                    h('table', { class: 'tabla', 'data-testid': 'tabla' },
+                    h('table', { class: 'tabla tabla-tarjetas', 'data-testid': 'tabla' },
                         h('thead', null,
                             h('tr', null,
                                 h('th', { scope: 'col' }, 'Fecha'),
@@ -115,12 +115,16 @@ export function crearVista(config) {
                         h('tbody', null,
                             items.map((item) =>
                                 h('tr', { 'data-testid': 'fila' },
-                                    h('td', { class: 'fecha' }, fechaLarga(item.fecha)),
-                                    h('td', { class: 'descripcion' }, item.descripcion),
+                                    h('td', { class: 'fecha', 'data-etiqueta': 'Fecha' }, fechaLarga(item.fecha)),
+                                    h('td', { class: 'descripcion', 'data-etiqueta': 'Descripción' }, item.descripcion),
                                     conCategoria
-                                        ? h('td', null, h('span', { class: item.categoria === categoriaMayor ? 'pastilla pastilla-destacada' : 'pastilla pastilla-gris' }, item.categoria))
+                                        ? h('td', { class: 'categoria', 'data-etiqueta': 'Categoría' }, h('span', { class: item.categoria === categoriaMayor ? 'pastilla pastilla-destacada' : 'pastilla pastilla-gris' }, item.categoria))
                                         : null,
-                                    h('td', { class: `num ${tipo}` }, dinero(item.valor)),
+                                    // El signo solo se muestra en celular, donde la fila se ve como tarjeta.
+                                    h('td', { class: `num celda-valor ${tipo}`, 'data-etiqueta': 'Valor' },
+                                        h('span', { class: 'signo-movil' }, tipo === 'gasto' ? '−' : '+'),
+                                        dinero(item.valor)
+                                    ),
                                     h('td', { class: 'acciones-col' },
                                         h('div', { class: 'acciones-fila' },
                                             h('button', {

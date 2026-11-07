@@ -79,7 +79,7 @@ export async function render() {
                 items.length === 0
                     ? vacio('Sin movimientos', Object.values(filtros).some(Boolean) ? 'Prueba con otros filtros.' : 'Cuando registres ingresos o gastos aparecerán aquí.')
                     : h('div', { class: 'tabla-contenedor' },
-                        h('table', { class: 'tabla', 'data-testid': 'tabla' },
+                        h('table', { class: 'tabla tabla-tarjetas', 'data-testid': 'tabla' },
                             h('thead', null,
                                 h('tr', null,
                                     h('th', { scope: 'col' }, 'Fecha'),
@@ -92,18 +92,19 @@ export async function render() {
                             h('tbody', null,
                                 items.map((m) =>
                                     h('tr', { 'data-testid': 'fila' },
-                                        h('td', { class: 'fecha' }, fechaLarga(m.fecha)),
-                                        h('td', null, h('span', { class: `insignia insignia-${m.tipo}` }, m.tipo === 'ingreso' ? 'Ingreso' : 'Gasto')),
-                                        h('td', { class: 'descripcion' }, m.descripcion),
-                                        h('td', null, m.categoria ? h('span', { class: 'pastilla pastilla-gris' }, m.categoria) : '—'),
-                                        h('td', { class: `num ${m.tipo}` }, `${m.tipo === 'gasto' ? '−' : '+'}${dinero(m.valor)}`)
+                                        h('td', { class: 'fecha', 'data-etiqueta': 'Fecha' }, fechaLarga(m.fecha)),
+                                        h('td', { class: 'tipo', 'data-etiqueta': 'Tipo' }, h('span', { class: `insignia insignia-${m.tipo}` }, m.tipo === 'ingreso' ? 'Ingreso' : 'Gasto')),
+                                        h('td', { class: 'descripcion', 'data-etiqueta': 'Descripción' }, m.descripcion),
+                                        h('td', { class: m.categoria ? 'categoria' : 'categoria sin-categoria', 'data-etiqueta': 'Categoría' },
+                                            m.categoria ? h('span', { class: 'pastilla pastilla-gris' }, m.categoria) : '—'),
+                                        h('td', { class: `num celda-valor ${m.tipo}`, 'data-etiqueta': 'Valor' }, `${m.tipo === 'gasto' ? '−' : '+'}${dinero(m.valor)}`)
                                     )
                                 )
                             ),
                             h('tfoot', null,
                                 h('tr', { class: 'saldo-filtrado' },
-                                    h('td', { colspan: '4' }, 'Saldo de lo filtrado'),
-                                    h('td', { class: 'num' },
+                                    h('td', { colspan: '4', class: 'etiqueta-pie' }, 'Saldo de lo filtrado'),
+                                    h('td', { class: 'num valor-pie' },
                                         h('span', { class: `resaltado ${saldoFiltrado < 0 ? 'negativo' : ''}` },
                                             h('span', { class: 'resaltado-trazo', 'aria-hidden': 'true' }),
                                             dinero(saldoFiltrado)

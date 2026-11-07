@@ -376,6 +376,8 @@ select {
 .acciones-fila { display: inline-flex; gap: 4px; }
 .tabla tfoot td { border-bottom: 0; border-top: 2px solid var(--tinta); font-weight: 600; }
 .tabla tr.total td { border-top: 2px solid var(--tinta); border-bottom: 0; font-weight: 700; }
+/* Signo + / − de Ingresos y Gastos: solo en celular, donde la fila se ve como tarjeta */
+.signo-movil { display: none; }
 .tabla tr.mes-actual td { background: var(--mostaza-tenue); font-weight: 600; }
 
 /* --- Pastillas --- */
@@ -838,6 +840,57 @@ select {
   .barra-titulo { font-size: 20px; }
   .usuario-nombre { display: none; }
   .principal { padding: 20px; }
+}
+
+/* Celular: en Ingresos, Gastos y Movimientos cada fila se ve como una tarjeta.
+   El HTML de la tabla no cambia; por encima de 640px se ve como siempre. */
+@media (max-width: 639.98px) {
+  .tabla-tarjetas, .tabla-tarjetas tbody, .tabla-tarjetas tfoot { display: block; width: 100%; }
+  /* Los encabezados se ocultan solo a la vista (igual que .solo-lectores) */
+  .tabla-tarjetas thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  .tabla-tarjetas tbody tr {
+    display: grid; align-items: center;
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "descripcion descripcion descripcion valor"
+      "fecha tipo categoria categoria"
+      "acciones acciones acciones acciones";
+    row-gap: 6px; padding: 14px 16px; border-bottom: 1px solid var(--renglon);
+  }
+  .tabla-tarjetas tbody tr:last-child { border-bottom: 0; }
+  /* tbody td: más peso que la regla de padding del media query de 560px */
+  .tabla-tarjetas tbody td, .tabla-tarjetas tbody tr:hover td {
+    display: block; padding: 0; border: 0; background: none; white-space: normal; min-width: 0;
+  }
+  .tabla-tarjetas td.descripcion { grid-area: descripcion; min-width: 0; font-weight: 600; padding-right: 12px; }
+  .tabla-tarjetas td.celda-valor { grid-area: valor; align-self: start; white-space: nowrap; }
+  .tabla-tarjetas td.fecha { grid-area: fecha; margin-right: 10px; font-size: 14px; }
+  .tabla-tarjetas td.tipo { grid-area: tipo; margin-right: 8px; }
+  .tabla-tarjetas td.categoria { grid-area: categoria; justify-self: start; }
+  .tabla-tarjetas td.sin-categoria { display: none; }
+  .tabla-tarjetas td.acciones-col { grid-area: acciones; width: auto; justify-self: end; }
+  .tabla-tarjetas .acciones-fila { gap: 8px; }
+  .tabla-tarjetas .btn-icono { width: 44px; height: 44px; }
+  .tabla-tarjetas .btn-icono::after { inset: 0; }
+  .tabla-tarjetas .signo-movil { display: inline; }
+
+  /* Nombre de la columna para lectores de pantalla (la tabla deja de anunciar sus encabezados) */
+  .tabla-tarjetas td[data-etiqueta]::before {
+    content: attr(data-etiqueta) ": ";
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+
+  /* Pie de Movimientos: etiqueta a la izquierda y saldo resaltado a la derecha */
+  .tabla-tarjetas tfoot tr.saldo-filtrado {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 16px; border-top: 2px solid var(--tinta);
+  }
+  .tabla-tarjetas tfoot td { display: block; padding: 0; border: 0; }
+
+  /* Anterior y Siguiente se reparten el ancho */
+  .paginacion .acciones { width: 100%; }
+  .paginacion .acciones .btn { flex: 1; }
 }
 
 @media (max-width: 560px) {
