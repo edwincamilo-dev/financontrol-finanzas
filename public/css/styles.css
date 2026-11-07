@@ -881,6 +881,18 @@ select {
   .tabla-tarjetas .btn-icono::after { inset: 0; }
   .tabla-tarjetas .signo-movil { display: inline; }
 
+  /* Ingresos y Gastos: los botones suben a la segunda línea, a la derecha de la fecha y la categoría.
+     (Movimientos no tiene acciones y conserva su distribución.) */
+  .tabla-con-acciones tbody tr {
+    grid-template-areas:
+      "descripcion descripcion descripcion valor"
+      "fecha tipo categoria acciones";
+  }
+  .tabla-con-acciones .acciones-fila { gap: 4px; }
+  /* Una categoría larga se recorta con puntos suspensivos y nunca empuja los botones */
+  .tabla-con-acciones td.categoria { max-width: 100%; padding-right: 8px; }
+  .tabla-con-acciones td.categoria .pastilla { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
   /* Nombre de la columna para lectores de pantalla (la tabla deja de anunciar sus encabezados) */
   .tabla-tarjetas td[data-etiqueta]::before {
     content: attr(data-etiqueta) ": ";
@@ -890,7 +902,8 @@ select {
   /* Pie de Movimientos: etiqueta a la izquierda y saldo resaltado a la derecha */
   .tabla-tarjetas tfoot tr.saldo-filtrado {
     display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    padding: 16px; border-top: 2px solid var(--tinta);
+    /* 22px a la derecha: el resaltado sobresale 6px del número y debe quedar dentro de la tarjeta */
+    padding: 16px 22px 16px 16px; border-top: 2px solid var(--tinta);
   }
   .tabla-tarjetas tfoot td { display: block; padding: 0; border: 0; }
 

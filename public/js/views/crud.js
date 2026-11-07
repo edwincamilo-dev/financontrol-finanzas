@@ -102,7 +102,7 @@ export function crearVista(config) {
 
             function tabla(items) {
                 return h('div', { class: 'tabla-contenedor' },
-                    h('table', { class: 'tabla tabla-tarjetas', 'data-testid': 'tabla' },
+                    h('table', { class: 'tabla tabla-tarjetas tabla-con-acciones', 'data-testid': 'tabla' },
                         h('thead', null,
                             h('tr', null,
                                 h('th', { scope: 'col' }, 'Fecha'),
