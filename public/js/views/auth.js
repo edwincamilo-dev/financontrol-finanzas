@@ -1,6 +1,6 @@
 // Pantalla de acceso: iniciar sesión o crear cuenta.
 
-import { h, campo, conEspera } from '../ui.js';
+import { h, icono, campo, conEspera } from '../ui.js';
 import { api, sesion, tomarAviso } from '../api.js';
 
 const LARGO_MINIMO_PASSWORD = 6;
@@ -73,26 +73,48 @@ export function render(modo, { alEntrar }) {
         }
     });
 
-    return h('main', { class: 'auth' },
-        // Portada decorativa (solo visual, oculta a lectores de pantalla).
-        h('div', { class: 'auth-hero', 'aria-hidden': 'true' },
-            h('p', { class: 'auth-kicker' }, 'Libro mayor personal · COP'),
-            h('p', { class: 'auth-titular' }, 'Cada peso,', h('br'), h('span', { class: 'tachado' }, 'perdido'), h('br'), h('em', null, 'bajo control.')),
-            h('ul', { class: 'auth-cinta' }, h('li', null, '+ Ingresos'), h('li', null, '− Gastos'), h('li', null, '= Saldo'))
+    const BENEFICIOS = ['Ingresos y gastos por categoría', 'Resumen mes a mes', 'Exporta tus movimientos a CSV'];
+
+    return h('div', { class: 'acceso' },
+        // Mismo encabezado que la portada
+        h('header', { class: 'acceso-cabecera' },
+            h('div', { class: 'landing-contenedor landing-fila' },
+                h('a', { class: 'landing-marca', href: '#/inicio', 'aria-label': 'FinanControl, inicio' },
+                    h('span', { class: 'landing-logo', 'aria-hidden': 'true' }),
+                    h('span', null, 'FinanControl')
+                ),
+                h('a', { class: 'enlace-volver', href: '#/inicio' }, icono('volver'), 'Volver al inicio')
+            )
         ),
-        h('section', { class: 'auth-tarjeta' },
-            h('div', { class: 'marca' },
-                h('span', { class: 'logo', 'aria-hidden': 'true' }, '$'),
-                h('div', null, h('h1', null, 'FinanControl'), h('p', null, 'Tus finanzas, bajo control.'))
+        h('main', { class: 'acceso-cuerpo landing-contenedor' },
+            h('section', { class: 'acceso-texto', 'aria-labelledby': 'acceso-titulo' },
+                h('h1', { id: 'acceso-titulo' }, 'Tu libreta te espera en blanco.'),
+                h('span', { class: 'landing-barra', 'aria-hidden': 'true' }),
+                h('p', null, esRegistro
+                    ? 'Crea tu cuenta gratis y empieza a anotar lo que entra y lo que sale. Solo toma un minuto.'
+                    : 'Entra para seguir anotando tus movimientos y ver cuánto te queda este mes.'),
+                h('ul', { class: 'beneficios' },
+                    BENEFICIOS.map((texto) => h('li', null, icono('palomita', { tam: 22 }), texto))
+                )
             ),
-            avisoPrevio ? h('p', { class: 'aviso-info', role: 'status' }, avisoPrevio) : null,
-            h('div', { class: 'pestanas', role: 'tablist' },
-                h('a', { href: '#/login', role: 'tab', 'aria-selected': String(!esRegistro), 'data-testid': 'tab-login' }, 'Iniciar sesión'),
-                h('a', { href: '#/registro', role: 'tab', 'aria-selected': String(esRegistro), 'data-testid': 'tab-registro' }, 'Crear cuenta')
-            ),
-            formulario
-        ),
-        h('p', { class: 'auth-pie' }, h('a', { href: '/api-docs', target: '_blank', rel: 'noopener' }, 'Documentación de la API (Swagger)'))
+            h('div', { class: 'acceso-columna' },
+                h('section', { class: 'tarjeta acceso-tarjeta', 'aria-labelledby': 'acceso-formulario' },
+                    h('span', { class: 'cinta', 'aria-hidden': 'true' }),
+                    h('h2', { id: 'acceso-formulario', class: 'solo-lectores' }, esRegistro ? 'Crear cuenta' : 'Iniciar sesión'),
+                    avisoPrevio ? h('p', { class: 'aviso-info', role: 'status' }, avisoPrevio) : null,
+                    h('div', { class: 'segmentado pestanas', role: 'tablist', 'aria-label': 'Tipo de acceso' },
+                        h('a', { href: '#/login', role: 'tab', 'aria-selected': String(!esRegistro), 'data-testid': 'tab-login' }, 'Iniciar sesión'),
+                        h('a', { href: '#/registro', role: 'tab', 'aria-selected': String(esRegistro), 'data-testid': 'tab-registro' }, 'Crear cuenta')
+                    ),
+                    formulario
+                ),
+                h('p', { class: 'acceso-pie' },
+                    '¿Eres desarrollador? ',
+                    h('a', { href: '/api-docs', target: '_blank', rel: 'noopener' }, 'Documentación de la API',
+                        h('span', { class: 'solo-lectores' }, ' (se abre en otra pestaña)'))
+                )
+            )
+        )
     );
 }
 

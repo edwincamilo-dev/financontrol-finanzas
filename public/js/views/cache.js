@@ -4,7 +4,7 @@ import { h, aviso, conEspera, cargando, tarjetaError } from '../ui.js';
 import { api, apiMedida } from '../api.js';
 
 function dato(titulo, valor, testid) {
-    return h('article', { class: 'tarjeta' }, h('h3', null, titulo), h('p', { class: 'valor', 'data-testid': testid }, String(valor)));
+    return h('article', { class: 'tarjeta' }, h('h3', { class: 'etiqueta-tarjeta' }, titulo), h('p', { class: 'valor', 'data-testid': testid }, String(valor)));
 }
 
 export async function render() {
@@ -32,7 +32,7 @@ export async function render() {
         }
     }
 
-    const botonVaciar = h('button', { type: 'button', class: 'btn btn-secundario', 'data-testid': 'vaciar-cache' }, 'Vaciar mi caché');
+    const botonVaciar = h('button', { type: 'button', class: 'btn btn-borde', 'data-testid': 'vaciar-cache' }, 'Vaciar mi caché');
 
     botonVaciar.addEventListener('click', () =>
         conEspera(botonVaciar, async () => {
@@ -67,11 +67,11 @@ export async function render() {
                 zonaPrueba.replaceChildren(
                     h('div', { class: 'tabla-contenedor' },
                         h('table', { class: 'tabla' },
-                            h('thead', null, h('tr', null, h('th', null, 'Consulta'), h('th', null, 'X-Cache'), h('th', { class: 'num' }, 'Tiempo'))),
+                            h('thead', null, h('tr', null, h('th', { scope: 'col' }, 'Consulta'), h('th', { scope: 'col' }, 'X-Cache'), h('th', { scope: 'col', class: 'num' }, 'Tiempo'))),
                             h('tbody', null, filas)
                         )
                     ),
-                    h('p', { class: 'sub' }, 'Si el saldo ya estaba guardado, las tres salen HIT. Tras vaciar el caché o crear/editar/borrar datos, la primera vuelve a ser MISS.')
+                    h('p', { class: 'nota' }, 'Si el saldo ya estaba guardado, las tres salen HIT. Tras vaciar el caché o crear/editar/borrar datos, la primera vuelve a ser MISS.')
                 );
 
                 await cargarEstadisticas();
@@ -91,7 +91,7 @@ export async function render() {
         zonaEstadisticas,
         h('section', { class: 'tarjeta' },
             h('div', { class: 'tarjeta-cabecera' }, h('h3', null, 'Prueba en vivo'), botonProbar),
-            h('p', { class: 'sub' }, 'Cada respuesta de la API trae la cabecera X-Cache: MISS (fue a la base de datos) o HIT (salió de memoria).'),
+            h('p', { class: 'nota' }, 'Cada respuesta de la API trae la cabecera X-Cache: MISS (fue a la base de datos) o HIT (salió de memoria).'),
             zonaPrueba
         )
     );

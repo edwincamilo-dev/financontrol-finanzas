@@ -2,12 +2,15 @@ require('dotenv').config();
 
 const path = require('path');
 const express = require('express');
+const helmet = require('helmet');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const pool = require('./config/database');
 const verificarToken = require('./middleware/auth');
 const cacheMiddleware = require('./middleware/cache');
+const { crearLimitadores } = require('./middleware/limites');
+const { DIRECTIVAS_CSP } = require('./config/seguridad');
 const {
     esFechaValida,
     leerRangoFechas,
@@ -20,13 +23,29 @@ const app = express();
 
 app.disable('x-powered-by');
 
+// Detrás del proxy HTTPS de un hosting (Render, Railway...) la IP real llega en X-Forwarded-For.
+// TRUST_PROXY=true hace que Express confíe en ese primer proxy (lo necesita el límite de intentos).
+if (['1', 'true'].includes(String(process.env.TRUST_PROXY).toLowerCase())) {
+    app.set('trust proxy', 1);
+}
+
 // CORS: solo los orígenes de ALLOWED_ORIGINS (y el propio) pueden usar la API desde un navegador
 app.use(require('./middleware/cors'));
+
+// Cabeceras de seguridad (CSP, X-Content-Type-Options, X-Frame-Options, Referrer-Policy...).
+// /api-docs reemplaza la CSP por una propia con nonce (ver src/docs/swagger.js).
+app.use(helmet({
+    contentSecurityPolicy: { useDefaults: true, directives: DIRECTIVAS_CSP },
+    xPoweredBy: false // ya lo quita app.disable('x-powered-by')
+}));
 
 // Frontend (carpeta public/). Sin "index": la ruta "/" decide abajo entre página y JSON.
 app.use(express.static(path.join(__dirname, '..', 'public'), { index: false }));
 
 app.use(express.json());
+
+// Límite de intentos para login y registro (desactivado en pruebas, ver src/middleware/limites.js)
+const limites = crearLimitadores();
 
 // Caché de las consultas GET (se invalida solo al crear, editar o borrar)
 app.use('/api', cacheMiddleware);
@@ -55,7 +74,7 @@ app.get('/', async (req, res) => {
     }
 });
 
-app.post('/api/usuarios/registro', async (req, res) => {
+app.post('/api/usuarios/registro', limites.registro, async (req, res) => {
     try {
         const { nombre, correo, password } = req.body;
 
@@ -96,7 +115,7 @@ app.post('/api/usuarios/registro', async (req, res) => {
     }
 });
 
-app.post('/api/usuarios/login', async (req, res) => {
+app.post('/api/usuarios/login', limites.login, async (req, res) => {
     try {
         const { correo, password } = req.body;
 

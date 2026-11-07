@@ -1,10 +1,11 @@
 // Movimientos: ingresos y gastos juntos, con filtros, paginación y exportación a CSV.
 
-import { h, dinero, fechaLarga, aviso, conEspera, cargando, vacio, tarjetaError } from '../ui.js';
+import { h, icono, dinero, fechaLarga, aviso, conEspera, cargando, vacio, tarjetaError } from '../ui.js';
 import { api, apiLista, descargar } from '../api.js';
 import { formularioFiltros, paginacion } from './comun.js';
 
 const LIMITE = 10;
+const TIPOS = [['', 'Todos'], ['ingreso', 'Ingresos'], ['gasto', 'Gastos']];
 
 export async function render() {
     let pagina = 1;
@@ -21,24 +22,58 @@ export async function render() {
 
     const panelFiltros = formularioFiltros(
         [
-            { nombre: 'tipo', etiqueta: 'Tipo', tipo: 'select', opciones: [['', 'Todos'], ['ingreso', 'Ingresos'], ['gasto', 'Gastos']] },
-            { nombre: 'buscar', etiqueta: 'Buscar', placeholder: 'Descripción…' },
+            { nombre: 'tipo', etiqueta: 'Tipo', tipo: 'select', opciones: TIPOS },
             { nombre: 'desde', etiqueta: 'Desde', tipo: 'date' },
             { nombre: 'hasta', etiqueta: 'Hasta', tipo: 'date' },
+            { nombre: 'buscar', etiqueta: 'Buscar', placeholder: 'Descripción…' },
             { nombre: 'categoria', etiqueta: 'Categoría de gasto', tipo: 'select', opciones: [['', 'Todas'], ...categorias.map((c) => [c, c])] }
         ],
         (valores) => {
             filtros = valores;
             pagina = 1;
+            sincronizarTipo();
             cargar();
         }
     );
+
+    // El tipo se elige con un control segmentado. El <select> original (data-testid=filtro-tipo)
+    // sigue en el formulario, oculto, y es el que se lee al filtrar.
+    const selectTipo = panelFiltros.controles.tipo.entrada;
+    const botonesTipo = TIPOS.map(([valor, texto]) =>
+        h('button', {
+            type: 'button',
+            'aria-pressed': 'false',
+            onclick: () => {
+                selectTipo.value = valor;
+                panelFiltros.nodo.requestSubmit();
+            }
+        }, texto)
+    );
+
+    function sincronizarTipo() {
+        botonesTipo.forEach((boton, i) => boton.setAttribute('aria-pressed', String(TIPOS[i][0] === selectTipo.value)));
+    }
+
+    panelFiltros.controles.tipo.nodo.hidden = true;
+    panelFiltros.nodo.prepend(
+        h('div', { class: 'campo campo-segmentado', role: 'group', 'aria-labelledby': 'etiqueta-tipo' },
+            h('span', { id: 'etiqueta-tipo', class: 'campo-etiqueta' }, 'Tipo'),
+            h('div', { class: 'segmentado' }, botonesTipo)
+        )
+    );
+    sincronizarTipo();
 
     async function cargar() {
         zona.replaceChildren(cargando());
 
         try {
-            const { items, total } = await apiLista('/api/movimientos', { consulta: { ...filtros, pagina, limite: LIMITE } });
+            // La página que se muestra y, aparte, la lista filtrada completa para el saldo del pie.
+            const [{ items, total }, todos] = await Promise.all([
+                apiLista('/api/movimientos', { consulta: { ...filtros, pagina, limite: LIMITE } }),
+                api('/api/movimientos', { consulta: filtros })
+            ]);
+
+            const saldoFiltrado = todos.reduce((suma, m) => suma + (m.tipo === 'gasto' ? -1 : 1) * Number(m.valor), 0);
 
             zona.replaceChildren(
                 items.length === 0
@@ -47,34 +82,45 @@ export async function render() {
                         h('table', { class: 'tabla', 'data-testid': 'tabla' },
                             h('thead', null,
                                 h('tr', null,
-                                    h('th', null, 'Fecha'),
-                                    h('th', null, 'Tipo'),
-                                    h('th', null, 'Descripción'),
-                                    h('th', null, 'Categoría'),
-                                    h('th', { class: 'num' }, 'Valor')
+                                    h('th', { scope: 'col' }, 'Fecha'),
+                                    h('th', { scope: 'col' }, 'Tipo'),
+                                    h('th', { scope: 'col' }, 'Descripción'),
+                                    h('th', { scope: 'col' }, 'Categoría'),
+                                    h('th', { scope: 'col', class: 'num' }, 'Valor')
                                 )
                             ),
                             h('tbody', null,
                                 items.map((m) =>
                                     h('tr', { 'data-testid': 'fila' },
-                                        h('td', null, fechaLarga(m.fecha)),
+                                        h('td', { class: 'fecha' }, fechaLarga(m.fecha)),
                                         h('td', null, h('span', { class: `insignia insignia-${m.tipo}` }, m.tipo === 'ingreso' ? 'Ingreso' : 'Gasto')),
-                                        h('td', null, m.descripcion),
-                                        h('td', null, m.categoria ? h('span', { class: 'etiqueta' }, m.categoria) : '—'),
+                                        h('td', { class: 'descripcion' }, m.descripcion),
+                                        h('td', null, m.categoria ? h('span', { class: 'pastilla pastilla-gris' }, m.categoria) : '—'),
                                         h('td', { class: `num ${m.tipo}` }, `${m.tipo === 'gasto' ? '−' : '+'}${dinero(m.valor)}`)
+                                    )
+                                )
+                            ),
+                            h('tfoot', null,
+                                h('tr', { class: 'saldo-filtrado' },
+                                    h('td', { colspan: '4' }, 'Saldo de lo filtrado'),
+                                    h('td', { class: 'num' },
+                                        h('span', { class: `resaltado ${saldoFiltrado < 0 ? 'negativo' : ''}` },
+                                            h('span', { class: 'resaltado-trazo', 'aria-hidden': 'true' }),
+                                            dinero(saldoFiltrado)
+                                        )
                                     )
                                 )
                             )
                         )
                     ),
-                paginacion({ pagina, limite: LIMITE, total, alCambiar: (nueva) => { pagina = nueva; cargar(); } })
+                paginacion({ pagina, limite: LIMITE, total, singular: 'movimiento', alCambiar: (nueva) => { pagina = nueva; cargar(); } })
             );
         } catch (error) {
             zona.replaceChildren(tarjetaError(error, cargar));
         }
     }
 
-    const botonExportar = h('button', { type: 'button', class: 'btn btn-secundario', 'data-testid': 'exportar' }, 'Exportar CSV');
+    const botonExportar = h('button', { type: 'button', class: 'btn btn-oscuro', 'data-testid': 'exportar' }, icono('descargar'), 'Exportar CSV');
 
     botonExportar.addEventListener('click', () =>
         conEspera(botonExportar, async () => {
@@ -94,7 +140,7 @@ export async function render() {
             h('div', null, h('h2', null, 'Movimientos'), h('p', { class: 'sub' }, 'Todos tus ingresos y gastos, del más reciente al más antiguo.')),
             botonExportar
         ),
-        h('section', { class: 'tarjeta' }, panelFiltros.nodo),
-        h('section', { class: 'tarjeta sin-relleno' }, zona)
+        h('section', { class: 'tarjeta', 'aria-label': 'Filtros' }, panelFiltros.nodo),
+        h('section', { class: 'tarjeta sin-relleno', 'aria-label': 'Lista de movimientos' }, zona)
     );
 }

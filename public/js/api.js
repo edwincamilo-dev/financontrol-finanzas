@@ -119,6 +119,7 @@ function fallar(respuesta, datos) {
     const mensajes = {
         403: 'El servidor rechazó el origen de esta página (CORS).',
         404: 'No se encontró lo que buscabas.',
+        429: 'Demasiados intentos. Intenta de nuevo en unos minutos.',
         500: 'El servidor tuvo un problema. Inténtalo de nuevo.'
     };
 

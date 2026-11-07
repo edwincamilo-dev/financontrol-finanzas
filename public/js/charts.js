@@ -1,6 +1,7 @@
 // Gráficas sin librerías: SVG para las barras mensuales y HTML para las categorías.
+// Los colores salen de styles.css (clases barra-ingreso, barra-gasto, relleno, mayor...).
 
-import { h, dinero, dineroCompacto } from './ui.js';
+import { h, dinero, dineroCompacto, porcentaje } from './ui.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -29,28 +30,51 @@ function maximoLimpio(valor) {
     return paso * potencia;
 }
 
+export function leyendaMensual() {
+    return h('div', { class: 'leyenda' },
+        h('span', null, h('i', { class: 'punto punto-ingreso', 'aria-hidden': 'true' }), 'Ingresos'),
+        h('span', null, h('i', { class: 'punto punto-gasto', 'aria-hidden': 'true' }), 'Gastos')
+    );
+}
+
 // meses: [{ nombre, ingresos, gastos, saldo }] (12 elementos)
-export function barrasMensuales(meses) {
-    const ancho = 520;
-    const alto = 300;
-    const margen = { izquierda: 50, derecha: 8, arriba: 12, abajo: 30 };
+// opciones.anio: si es el año en curso, el mes actual se marca con fondo amarillo muy claro.
+// opciones.leyenda: false cuando la leyenda va en la cabecera de la tarjeta.
+export function barrasMensuales(meses, { anio = new Date().getFullYear(), leyenda = true } = {}) {
+    const ancho = 560;
+    const alto = 280;
+    const margen = { izquierda: 50, derecha: 6, arriba: 12, abajo: 30 };
     const areaAncho = ancho - margen.izquierda - margen.derecha;
     const areaAlto = alto - margen.arriba - margen.abajo;
     const maximo = maximoLimpio(Math.max(...meses.flatMap((m) => [m.ingresos, m.gastos])));
     const grupo = areaAncho / meses.length;
-    const barra = Math.min(grupo * 0.32, 22);
+    const barra = Math.min(grupo * 0.3, 20);
     const escala = (valor) => (valor / maximo) * areaAlto;
+    const base = margen.arriba + areaAlto;
+    const mesActual = Number(anio) === new Date().getFullYear() ? new Date().getMonth() : -1;
+
+    // Resumen para lectores de pantalla: solo los meses con movimientos.
+    const conDatos = meses.filter((m) => m.ingresos || m.gastos);
+    const resumen = conDatos.length
+        ? conDatos.map((m) => `${m.nombre}: ingresos ${dinero(m.ingresos)}, gastos ${dinero(m.gastos)}`).join('; ')
+        : 'sin movimientos';
 
     const svg = s('svg', {
         viewBox: `0 0 ${ancho} ${alto}`,
         class: 'grafica',
         role: 'img',
-        'aria-label': 'Ingresos y gastos por mes'
+        'aria-label': `Ingresos y gastos por mes de ${anio}. ${resumen}.`
     });
 
-    for (let i = 0; i <= 4; i++) {
+    if (mesActual >= 0) {
+        svg.append(s('rect', {
+            x: margen.izquierda + grupo * mesActual, y: margen.arriba - 6, width: grupo, height: areaAlto + 6 + 24, rx: 6, class: 'mes-actual'
+        }));
+    }
+
+    for (let i = 1; i <= 4; i++) {
         const valor = (maximo / 4) * i;
-        const y = margen.arriba + areaAlto - escala(valor);
+        const y = base - escala(valor);
 
         svg.append(
             s('line', { x1: margen.izquierda, x2: ancho - margen.derecha, y1: y, y2: y, class: 'guia' }),
@@ -60,7 +84,6 @@ export function barrasMensuales(meses) {
 
     meses.forEach((mes, indice) => {
         const x0 = margen.izquierda + grupo * indice + (grupo - barra * 2 - 3) / 2;
-        const base = margen.arriba + areaAlto;
         const altoIngreso = escala(mes.ingresos);
         const altoGasto = escala(mes.gastos);
 
@@ -74,35 +97,67 @@ export function barrasMensuales(meses) {
             ),
             s('text', {
                 x: margen.izquierda + grupo * indice + grupo / 2,
-                y: alto - 10,
-                class: 'eje',
+                y: alto - 8,
+                class: indice === mesActual ? 'eje actual' : 'eje',
                 'text-anchor': 'middle'
             }, mes.nombre.slice(0, 3))
         );
     });
 
-    return h('figure', { class: 'figura' },
-        svg,
-        h('figcaption', { class: 'leyenda' },
-            h('span', null, h('i', { class: 'punto punto-ingreso' }), 'Ingresos'),
-            h('span', null, h('i', { class: 'punto punto-gasto' }), 'Gastos')
+    // Línea base azul marino
+    svg.append(s('line', { x1: margen.izquierda, x2: ancho - margen.derecha, y1: base, y2: base, class: 'base' }));
+
+    return h('figure', { class: 'figura' }, svg, leyenda ? h('figcaption', null, leyendaMensual()) : null);
+}
+
+// Panel: barras horizontales; la categoría mayor en amarillo, las demás en azul marino.
+// items: [{ categoria, cantidad, total, porcentaje }] ordenados de mayor a menor
+export function barrasCategorias(items) {
+    return h('ul', { class: 'categorias' },
+        items.map((item, indice) =>
+            h('li', null,
+                h('div', { class: 'categoria-fila' },
+                    h('span', { class: 'categoria-nombre' }, item.categoria),
+                    h('span', { class: 'categoria-valor' }, dinero(item.total), h('small', null, ` · ${porcentaje(item.porcentaje)}`))
+                ),
+                h('div', { class: 'pista', 'aria-hidden': 'true' },
+                    h('div', { class: indice === 0 ? 'relleno mayor' : 'relleno', style: `width:${Math.max(item.porcentaje, 1.5)}%` })
+                ),
+                h('small', { class: 'categoria-cantidad' }, `${item.cantidad} ${item.cantidad === 1 ? 'gasto' : 'gastos'}`)
+            )
         )
     );
 }
 
-// items: [{ categoria, cantidad, total, porcentaje }]
-export function barrasCategorias(items) {
-    return h('ul', { class: 'categorias' },
-        items.map((item) =>
-            h('li', null,
-                h('div', { class: 'categoria-fila' },
-                    h('span', { class: 'categoria-nombre' }, item.categoria),
-                    h('span', { class: 'categoria-valor' }, dinero(item.total), h('small', null, ` · ${item.porcentaje}%`))
-                ),
-                h('div', { class: 'pista', role: 'presentation' },
-                    h('div', { class: 'relleno', style: `width:${Math.max(item.porcentaje, 1.5)}%` })
-                ),
-                h('small', { class: 'categoria-cantidad' }, `${item.cantidad} ${item.cantidad === 1 ? 'gasto' : 'gastos'}`)
+// Resumen: tabla Categoría | Proporción | Total, con una fila Total al final.
+export function tablaCategorias(items) {
+    const total = items.reduce((suma, item) => suma + Number(item.total), 0);
+
+    return h('div', { class: 'tabla-contenedor' },
+        h('table', { class: 'tabla tabla-categorias' },
+            h('thead', null, h('tr', null,
+                h('th', { scope: 'col' }, 'Categoría'),
+                h('th', { scope: 'col' }, 'Proporción'),
+                h('th', { scope: 'col', class: 'num' }, 'Total')
+            )),
+            h('tbody', null,
+                items.map((item, indice) => h('tr', null,
+                    h('td', null, item.categoria),
+                    h('td', null,
+                        h('div', { class: 'proporcion' },
+                            h('div', { class: 'pista', 'aria-hidden': 'true' },
+                                h('div', { class: indice === 0 ? 'relleno mayor' : 'relleno', style: `width:${Math.max(item.porcentaje, 1.5)}%` })
+                            ),
+                            h('span', null, porcentaje(item.porcentaje))
+                        )
+                    ),
+                    h('td', { class: 'num' }, dinero(item.total))
+                )),
+                h('tr', { class: 'total' },
+                    h('td', null, 'Total'),
+                    h('td', null),
+                    h('td', { class: 'num gasto' }, dinero(total))
+                )
             )
         )
     );

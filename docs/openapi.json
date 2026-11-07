@@ -105,6 +105,19 @@
               }
             }
           },
+          "429": {
+            "description": "Demasiados registros desde la misma IP (10 por hora)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                },
+                "example": {
+                  "mensaje": "Demasiados intentos. Intenta de nuevo en unos minutos."
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error interno",
             "content": {
@@ -161,6 +174,19 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Mensaje"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiados intentos fallidos (por defecto 5 por IP y correo cada 15 minutos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensaje"
+                },
+                "example": {
+                  "mensaje": "Demasiados intentos. Intenta de nuevo en unos minutos."
                 }
               }
             }

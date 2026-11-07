@@ -34,7 +34,9 @@ describe('Interfaz web', () => {
 
     it('permite registrarse, crear un ingreso y un gasto, ver el saldo y cerrar sesión', () => {
         cy.visit('/');
-        cy.location('hash').should('eq', '#/login');
+        cy.location('hash').should('eq', '#/inicio');
+        cy.get('[data-testid=hero-empezar]').click();
+        cy.location('hash').should('eq', '#/registro');
 
         // Registro (entra directo al panel)
         cy.get('[data-testid=tab-registro]').click();

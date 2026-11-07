@@ -1,36 +1,54 @@
 // Resumen financiero: por periodo (con categorías) y mes a mes de un año.
 
-import { h, campo, seleccion, dinero, aISO, inicioDeMes, finDeMes, cargando, vacio, tarjetaError } from '../ui.js';
+import { h, plural, campo, seleccion, dinero, aISO, inicioDeMes, finDeMes, cargando, vacio, tarjetaError } from '../ui.js';
 import { api } from '../api.js';
-import { barrasMensuales, barrasCategorias } from '../charts.js';
+import { barrasMensuales, leyendaMensual, tablaCategorias } from '../charts.js';
+
+function cifra(etiqueta, contenido, nota) {
+    return h('div', { class: 'cifra' }, h('span', { class: 'campo-etiqueta' }, etiqueta), contenido, nota ? h('span', { class: 'nota' }, nota) : null);
+}
 
 export async function render() {
     const anioActual = new Date().getFullYear();
-    const zonaPeriodo = h('div', { 'aria-live': 'polite' });
+    const zonaCifras = h('div', { 'aria-live': 'polite' });
+    const zonaCategorias = h('div', { 'aria-live': 'polite' });
     const zonaAnio = h('div', { 'aria-live': 'polite' });
 
     // ---------- Periodo ----------
     const desde = campo({ etiqueta: 'Desde', nombre: 'desde', tipo: 'date' });
     const hasta = campo({ etiqueta: 'Hasta', nombre: 'hasta', tipo: 'date' });
 
-    function aplicarPreset(inicio, fin) {
-        desde.entrada.value = inicio;
-        hasta.entrada.value = fin;
-        cargarPeriodo();
+    const PERIODOS = [
+        ['Este mes', () => [inicioDeMes(), finDeMes()]],
+        ['Mes pasado', () => [inicioDeMes(-1), finDeMes(-1)]],
+        ['Este año', () => [`${anioActual}-01-01`, aISO(new Date())]],
+        ['Todo', () => ['', '']]
+    ];
+
+    const botonesPeriodo = PERIODOS.map(([texto, rango], indice) =>
+        h('button', {
+            type: 'button',
+            class: 'pastilla-opcion',
+            'aria-pressed': 'false',
+            onclick: () => {
+                [desde.entrada.value, hasta.entrada.value] = rango();
+                marcarPeriodo(indice);
+                cargarPeriodo();
+            }
+        }, texto)
+    );
+
+    function marcarPeriodo(activo) {
+        botonesPeriodo.forEach((boton, i) => boton.setAttribute('aria-pressed', String(i === activo)));
     }
 
-    const presets = h('div', { class: 'presets', 'aria-label': 'Periodos rápidos' },
-        h('button', { type: 'button', class: 'btn btn-texto', onclick: () => aplicarPreset(inicioDeMes(), finDeMes()) }, 'Este mes'),
-        h('button', { type: 'button', class: 'btn btn-texto', onclick: () => aplicarPreset(inicioDeMes(-1), finDeMes(-1)) }, 'Mes pasado'),
-        h('button', { type: 'button', class: 'btn btn-texto', onclick: () => aplicarPreset(`${anioActual}-01-01`, aISO(new Date())) }, 'Este año'),
-        h('button', { type: 'button', class: 'btn btn-texto', onclick: () => aplicarPreset('', '') }, 'Todo')
-    );
+    // Si se escribe una fecha a mano, ningún periodo rápido queda marcado.
+    [desde.entrada, hasta.entrada].forEach((entrada) => entrada.addEventListener('input', () => marcarPeriodo(-1)));
 
     const formularioPeriodo = h('form', { class: 'filtros', 'data-testid': 'form-periodo' },
         desde.nodo,
         hasta.nodo,
-        h('div', { class: 'filtros-acciones' }, h('button', { type: 'submit', class: 'btn btn-secundario', 'data-testid': 'calcular' }, 'Calcular')),
-        presets
+        h('div', { class: 'filtros-acciones' }, h('button', { type: 'submit', class: 'btn btn-oscuro', 'data-testid': 'calcular' }, 'Calcular'))
     );
 
     formularioPeriodo.addEventListener('submit', (evento) => {
@@ -39,34 +57,37 @@ export async function render() {
     });
 
     async function cargarPeriodo() {
-        zonaPeriodo.replaceChildren(cargando());
+        zonaCifras.replaceChildren(cargando());
+        zonaCategorias.replaceChildren();
 
         try {
             const datos = await api('/api/resumen', { consulta: { desde: desde.entrada.value, hasta: hasta.entrada.value } });
 
-            zonaPeriodo.replaceChildren(
-                h('div', { class: 'tarjetas' },
-                    h('article', { class: 'tarjeta' }, h('h3', null, 'Ingresos'),
+            zonaCifras.replaceChildren(
+                h('div', { class: 'cifras' },
+                    cifra('Ingresos',
                         h('p', { class: 'valor ingreso', 'data-testid': 'resumen-ingresos' }, dinero(datos.totalIngresos)),
-                        h('p', { class: 'sub' }, `${datos.cantidadIngresos} ${datos.cantidadIngresos === 1 ? 'registro' : 'registros'}`)),
-                    h('article', { class: 'tarjeta' }, h('h3', null, 'Gastos'),
+                        plural(datos.cantidadIngresos, 'registro')),
+                    cifra('Gastos',
                         h('p', { class: 'valor gasto', 'data-testid': 'resumen-gastos' }, dinero(datos.totalGastos)),
-                        h('p', { class: 'sub' }, `${datos.cantidadGastos} ${datos.cantidadGastos === 1 ? 'registro' : 'registros'}`)),
-                    h('article', { class: 'tarjeta destacada' }, h('h3', null, 'Saldo del periodo'),
-                        h('p', { class: `valor ${datos.saldo < 0 ? 'negativo' : ''}`, 'data-testid': 'resumen-saldo' }, dinero(datos.saldo)))
-                ),
-                h('section', { class: 'tarjeta' },
-                    h('h3', null, 'Gastos por categoría'),
-                    datos.gastosPorCategoria.length === 0
-                        ? vacio('Sin gastos en este periodo', 'Prueba con otro rango de fechas.')
-                        : barrasCategorias(datos.gastosPorCategoria)
+                        plural(datos.cantidadGastos, 'registro')),
+                    cifra('Saldo del periodo',
+                        h('p', { class: `valor saldo resaltado ${datos.saldo < 0 ? 'negativo' : ''}`, 'data-testid': 'resumen-saldo' },
+                            h('span', { class: 'resaltado-trazo', 'aria-hidden': 'true' }),
+                            dinero(datos.saldo)))
                 )
+            );
+
+            zonaCategorias.replaceChildren(
+                ...(datos.gastosPorCategoria.length === 0
+                    ? [vacio('Sin gastos en este periodo', 'Prueba con otro rango de fechas.')]
+                    : [tablaCategorias(datos.gastosPorCategoria), h('p', { class: 'nota' }, 'La categoría donde más gastas se marca en amarillo.')])
             );
         } catch (fallo) {
             if (fallo.estado === 400) {
-                zonaPeriodo.replaceChildren(h('p', { class: 'form-error', role: 'alert' }, fallo.message));
+                zonaCifras.replaceChildren(h('p', { class: 'form-error', role: 'alert' }, fallo.message));
             } else {
-                zonaPeriodo.replaceChildren(tarjetaError(fallo, cargarPeriodo));
+                zonaCifras.replaceChildren(tarjetaError(fallo, cargarPeriodo));
             }
         }
     }
@@ -85,18 +106,23 @@ export async function render() {
 
         try {
             const datos = await api('/api/resumen/mensual', { consulta: { anio: selectorAnio.entrada.value } });
+            const mesActual = Number(datos.anio) === anioActual ? new Date().getMonth() : -1;
 
             zonaAnio.replaceChildren(
                 ...(datos.totalIngresos === 0 && datos.totalGastos === 0
                     ? [vacio(`Sin movimientos en ${datos.anio}`, 'Elige otro año o registra ingresos y gastos.')]
                     : [
-                        barrasMensuales(datos.meses),
+                        barrasMensuales(datos.meses, { anio: datos.anio, leyenda: false }),
                         h('div', { class: 'tabla-contenedor' },
                             h('table', { class: 'tabla', 'data-testid': 'tabla-mensual' },
+                                h('caption', { class: 'solo-lectores' }, `Ingresos, gastos y saldo por mes de ${datos.anio}`),
                                 h('thead', null, h('tr', null,
-                                    h('th', null, 'Mes'), h('th', { class: 'num' }, 'Ingresos'), h('th', { class: 'num' }, 'Gastos'), h('th', { class: 'num' }, 'Saldo'))),
+                                    h('th', { scope: 'col' }, 'Mes'),
+                                    h('th', { scope: 'col', class: 'num' }, 'Ingresos'),
+                                    h('th', { scope: 'col', class: 'num' }, 'Gastos'),
+                                    h('th', { scope: 'col', class: 'num' }, 'Saldo'))),
                                 h('tbody', null,
-                                    datos.meses.map((m) => h('tr', null,
+                                    datos.meses.map((m, i) => h('tr', { class: i === mesActual ? 'mes-actual' : null },
                                         h('td', { class: 'capitalizar' }, m.nombre),
                                         h('td', { class: 'num ingreso' }, dinero(m.ingresos)),
                                         h('td', { class: 'num gasto' }, dinero(m.gastos)),
@@ -119,8 +145,8 @@ export async function render() {
     }
 
     // Por defecto: el mes actual
-    desde.entrada.value = inicioDeMes();
-    hasta.entrada.value = finDeMes();
+    [desde.entrada.value, hasta.entrada.value] = PERIODOS[0][1]();
+    marcarPeriodo(0);
     cargarPeriodo();
     cargarAnio();
 
@@ -128,11 +154,19 @@ export async function render() {
         h('header', { class: 'vista-cabecera' },
             h('div', null, h('h2', null, 'Resumen'), h('p', { class: 'sub' }, 'Consulta tus totales por periodo y mes a mes.'))
         ),
-        h('section', { class: 'tarjeta' }, h('h3', null, 'Por periodo'), formularioPeriodo),
-        zonaPeriodo,
         h('section', { class: 'tarjeta' },
-            h('div', { class: 'tarjeta-cabecera' }, h('h3', null, 'Mes a mes'), selectorAnio.nodo),
+            h('h3', null, 'Por periodo'),
+            h('div', { class: 'pastillas-opciones', role: 'group', 'aria-label': 'Periodos rápidos' }, botonesPeriodo),
+            formularioPeriodo,
+            zonaCifras
+        ),
+        h('section', { class: 'tarjeta' },
+            h('div', { class: 'tarjeta-cabecera' }, h('h3', null, 'Mes a mes'), leyendaMensual(), selectorAnio.nodo),
             zonaAnio
+        ),
+        h('section', { class: 'tarjeta' },
+            h('h3', null, 'Gastos por categoría'),
+            zonaCategorias
         )
     );
 }

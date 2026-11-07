@@ -1,6 +1,6 @@
 // Perfil: datos personales, cambio de contraseña y eliminación de la cuenta.
 
-import { h, campo, aviso, conEspera, modal } from '../ui.js';
+import { h, icono, iniciales, campo, aviso, conEspera, modal } from '../ui.js';
 import { api, sesion } from '../api.js';
 
 const LARGO_MINIMO_PASSWORD = 6;
@@ -20,17 +20,27 @@ export async function render({ estado, alCerrarSesion, alActualizarUsuario }) {
 
     estado.usuario = usuario;
 
+    // ---------- Encabezado ----------
+    const avatar = h('span', { class: 'avatar avatar-grande', 'aria-hidden': 'true' }, iniciales(usuario.nombre));
+    const tituloNombre = h('h2', null, usuario.nombre);
+    const textoCorreo = h('p', null, usuario.correo);
+
     // ---------- Datos ----------
     const nombre = campo({ etiqueta: 'Nombre', nombre: 'nombre', valor: usuario.nombre, maxlength: '100', required: true });
     const correo = campo({ etiqueta: 'Correo', nombre: 'correo', tipo: 'email', valor: usuario.correo, maxlength: '150', required: true });
     const errorDatos = mensajeError();
     const guardarDatos = h('button', { type: 'submit', class: 'btn btn-primario', 'data-testid': 'guardar-perfil' }, 'Guardar cambios');
+    const confirmacion = h('p', { class: 'confirmacion', role: 'status', hidden: true }, icono('palomita', { tam: 20 }), 'Cambios guardados');
 
-    const formularioDatos = h('form', { class: 'formulario', novalidate: true, 'data-testid': 'form-perfil' }, nombre.nodo, correo.nodo, errorDatos, guardarDatos);
+    const formularioDatos = h('form', { class: 'formulario', novalidate: true, 'data-testid': 'form-perfil' },
+        nombre.nodo, correo.nodo, errorDatos,
+        h('div', { class: 'acciones' }, guardarDatos, confirmacion)
+    );
 
     formularioDatos.addEventListener('submit', async (evento) => {
         evento.preventDefault();
         errorDatos.hidden = true;
+        confirmacion.hidden = true;
 
         const cuerpo = { nombre: nombre.entrada.value.trim(), correo: correo.entrada.value.trim() };
 
@@ -44,7 +54,11 @@ export async function render({ estado, alCerrarSesion, alActualizarUsuario }) {
             sesion.guardar(respuesta.token);
             estado.usuario = respuesta.usuario;
             alActualizarUsuario();
-            aviso('Perfil actualizado.');
+
+            tituloNombre.textContent = respuesta.usuario.nombre;
+            textoCorreo.textContent = respuesta.usuario.correo;
+            avatar.textContent = iniciales(respuesta.usuario.nombre);
+            confirmacion.hidden = false;
         } catch (fallo) {
             mostrar(errorDatos, fallo.message);
         }
@@ -55,10 +69,12 @@ export async function render({ estado, alCerrarSesion, alActualizarUsuario }) {
     const nueva = campo({ etiqueta: 'Contraseña nueva', nombre: 'passwordNueva', tipo: 'password', autocomplete: 'new-password', required: true, ayuda: `Mínimo ${LARGO_MINIMO_PASSWORD} caracteres.` });
     const repetida = campo({ etiqueta: 'Repite la contraseña nueva', nombre: 'passwordRepetida', tipo: 'password', autocomplete: 'new-password', required: true });
     const errorPassword = mensajeError();
-    const guardarPassword = h('button', { type: 'submit', class: 'btn btn-primario', 'data-testid': 'guardar-password' }, 'Cambiar contraseña');
+    const guardarPassword = h('button', { type: 'submit', class: 'btn btn-oscuro', 'data-testid': 'guardar-password' }, 'Cambiar contraseña');
 
     const formularioPassword = h('form', { class: 'formulario', novalidate: true, 'data-testid': 'form-password' },
-        actual.nodo, nueva.nodo, repetida.nodo, errorPassword, guardarPassword);
+        actual.nodo, nueva.nodo, repetida.nodo, errorPassword,
+        h('div', { class: 'acciones' }, guardarPassword)
+    );
 
     formularioPassword.addEventListener('submit', async (evento) => {
         evento.preventDefault();
@@ -89,11 +105,11 @@ export async function render({ estado, alCerrarSesion, alActualizarUsuario }) {
         const eliminar = h('button', { type: 'submit', class: 'btn btn-peligro', 'data-testid': 'eliminar-cuenta-confirmar' }, 'Eliminar mi cuenta');
 
         const formulario = h('form', { class: 'formulario', novalidate: true },
-            h('p', null, 'Se borrarán tu cuenta y todos tus ingresos y gastos. Esta acción no se puede deshacer. Escribe tu contraseña para confirmar.'),
+            h('p', { class: 'modal-texto' }, 'Se borrarán tu cuenta y todos tus ingresos y gastos. Esta acción no se puede deshacer. Escribe tu contraseña para confirmar.'),
             password.nodo,
             error,
-            h('div', { class: 'acciones' },
-                h('button', { type: 'button', class: 'btn btn-secundario', onclick: () => ventana.cerrar() }, 'Cancelar'),
+            h('div', { class: 'acciones modal-pie' },
+                h('button', { type: 'button', class: 'btn btn-texto', onclick: () => ventana.cerrar() }, 'Cancelar'),
                 eliminar
             )
         );
@@ -120,17 +136,18 @@ export async function render({ estado, alCerrarSesion, alActualizarUsuario }) {
     }
 
     return h('div', { class: 'vista' },
-        h('header', { class: 'vista-cabecera' },
-            h('div', null, h('h2', null, 'Perfil'), h('p', { class: 'sub' }, 'Administra tus datos y tu seguridad.'))
+        h('header', { class: 'perfil-cabecera' },
+            avatar,
+            h('div', null, tituloNombre, textoCorreo)
         ),
         h('div', { class: 'rejilla-dos' },
-            h('section', { class: 'tarjeta' }, h('h3', null, 'Datos personales'), formularioDatos),
-            h('section', { class: 'tarjeta' }, h('h3', null, 'Cambiar contraseña'), formularioPassword)
+            h('section', { class: 'tarjeta', 'aria-labelledby': 'titulo-datos' }, h('h3', { id: 'titulo-datos' }, 'Datos personales'), formularioDatos),
+            h('section', { class: 'tarjeta', 'aria-labelledby': 'titulo-password' }, h('h3', { id: 'titulo-password' }, 'Cambiar contraseña'), formularioPassword)
         ),
-        h('section', { class: 'tarjeta peligro-zona' },
-            h('h3', null, 'Zona de peligro'),
-            h('p', null, 'Eliminar tu cuenta borra de forma permanente todos tus datos.'),
-            h('button', { type: 'button', class: 'btn btn-peligro-borde', 'data-testid': 'eliminar-cuenta', onclick: abrirEliminar }, 'Eliminar cuenta…')
+        h('section', { class: 'tarjeta tarjeta-peligro', 'aria-labelledby': 'titulo-eliminar' },
+            h('h3', { id: 'titulo-eliminar' }, 'Eliminar cuenta'),
+            h('p', null, 'Se borran de forma permanente tu cuenta, tus ingresos y tus gastos. No se puede deshacer.'),
+            h('button', { type: 'button', class: 'btn btn-peligro', 'data-testid': 'eliminar-cuenta', onclick: abrirEliminar }, 'Eliminar mi cuenta')
         )
     );
 }

@@ -62,8 +62,14 @@ DB_USER=tu_usuario_mysql
 DB_PASSWORD=tu_contraseña_mysql
 DB_NAME=financontrol
 DB_PORT=3306
-JWT_SECRET=una_clave_secreta_larga_y_aleatoria
+JWT_SECRET=pega_aqui_el_valor_generado_de_96_caracteres
 PORT=3000
+```
+
+`JWT_SECRET` debe tener **al menos 32 caracteres**; si no, el servidor no arranca y te dice cómo arreglarlo. Genera uno con:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 ```
 
 | Variable | Descripción |
@@ -72,12 +78,16 @@ PORT=3000
 | `DB_USER` / `DB_PASSWORD` | Credenciales de tu MySQL |
 | `DB_NAME` | Nombre de la base de datos creada en el paso 3 |
 | `DB_PORT` | Puerto de MySQL (por defecto `3306`) |
-| `JWT_SECRET` | Clave para firmar los tokens JWT. Inventa una propia |
+| `JWT_SECRET` | Clave para firmar los tokens JWT. Mínimo 32 caracteres (genérala con el comando de arriba) |
 | `PORT` | Puerto donde correrá la API (por defecto `3000`) |
 | `CACHE_ENABLED` | Opcional. `false` desactiva el caché |
 | `CACHE_TTL_SEGUNDOS` | Opcional. TTL único para todas las rutas (si no se define, cada ruta usa el suyo) |
 | `ALLOWED_ORIGINS` | Opcional. Orígenes que pueden usar la API desde un navegador, separados por comas (por defecto `http://localhost:3000,http://127.0.0.1:3000`). Ver la sección *CORS* |
 | `CORS_EXIGIR_ORIGEN` | Opcional. `true` rechaza también las peticiones sin cabecera `Origin` (Postman, curl, Cypress). Por defecto `false` |
+| `RATE_LIMIT_LOGIN_MAX` | Opcional. Intentos fallidos de login permitidos por IP y correo (por defecto `5`) |
+| `RATE_LIMIT_VENTANA_MIN` | Opcional. Minutos de la ventana del límite de login (por defecto `15`) |
+| `RATE_LIMIT_DESACTIVADO` | Opcional. `true` apaga el límite de intentos. **Ponlo en `true` para correr Cypress**, que crea muchos usuarios seguidos. Con `NODE_ENV=test` (Jest) ya está apagado |
+| `TRUST_PROXY` | Opcional. `true` al publicar detrás del proxy HTTPS de un hosting (Render, Railway…), para que el límite de intentos vea la IP real |
 
 > ⚠️ **Nunca subas tu `.env` a GitHub.** Ya está incluido en `.gitignore`.
 
@@ -121,14 +131,14 @@ El reporte HTML queda en `coverage/lcov-report/index.html` (ábrelo con el naveg
 
 ## 7. Ejecutar Cypress (E2E de la API)
 
-Las pruebas de la API usan `cy.request()` y la prueba de la interfaz abre la aplicación web en el navegador. Primero levanta el servidor y, en **otra terminal**:
+Las pruebas de la API usan `cy.request()` y las de la interfaz abren la aplicación web en el navegador. Cypress registra e inicia sesión con muchos usuarios seguidos, así que primero pon `RATE_LIMIT_DESACTIVADO=true` en tu `.env` (si no, el límite de intentos responderá `429`). Luego levanta el servidor y, en **otra terminal**:
 
 ```bash
 npm run cy:run      # modo headless
 npm run cy:open     # modo interactivo
 ```
 
-Las especificaciones están en `cypress/e2e/` y cubren autenticación y cuenta, CRUD de ingresos y gastos, filtros y resúmenes, caché (MISS, HIT, 304 e invalidación), contrato, CORS con Swagger y la interfaz web.
+Las especificaciones están en `cypress/e2e/` y cubren autenticación y cuenta, CRUD de ingresos y gastos, filtros y resúmenes, caché (MISS, HIT, 304 e invalidación), contrato, CORS con Swagger, la interfaz web y la portada con el modo desarrollador.
 
 ## Endpoints (27)
 
@@ -192,13 +202,22 @@ curl -i "http://localhost:3000/api/gastos?desde=2026-01-01&hasta=2026-01-31" \
 
 La carpeta `public/` contiene una aplicación web (HTML, CSS y JavaScript, sin frameworks ni instalación extra) que la misma API sirve en `http://localhost:3000/`:
 
+- **Portada (`#/inicio`):** lo primero que ve quien no ha iniciado sesión: qué hace la app, un resumen del mes de ejemplo y cómo funciona.
 - **Acceso:** registro e inicio de sesión (el token JWT se guarda en el navegador).
 - **Panel:** saldo, ingresos y gastos totales, gráfica del año, gastos por categoría y últimos movimientos.
 - **Ingresos y Gastos:** crear, editar y eliminar, con filtros (texto, fechas, categoría) y paginación.
 - **Movimientos:** ingresos y gastos juntos, con filtros y exportación a CSV.
 - **Resumen:** totales por periodo y mes a mes.
-- **Caché:** estadísticas y una prueba en vivo de `MISS` / `HIT`. La barra superior muestra el `X-Cache` de la última consulta.
 - **Perfil:** cambiar datos y contraseña, o eliminar la cuenta.
+
+### Modo desarrollador (pantalla del caché)
+
+El caché funciona siempre, para todos. Lo que se oculta a los usuarios normales es su **pantalla de pruebas**, porque es una herramienta para desarrollar y demostrar, no parte del producto. El modo desarrollador se activa solo:
+
+- si la app se abre en `localhost` o `127.0.0.1`, o
+- si la dirección trae `?dev=1` (por ejemplo `https://tu-app.com/?dev=1#/panel`). Queda guardado en la pestaña (`sessionStorage`); `?dev=0` lo apaga.
+
+En ese modo aparece **Herramientas: Caché** al pie del menú lateral (estadísticas y prueba en vivo de `MISS` / `HIT`) y la barra superior muestra el `X-Cache` de la última consulta. Fuera de él, `#/cache` lleva al panel. Los endpoints `GET /api/cache/estadisticas` y `DELETE /api/cache` siguen disponibles y documentados en Swagger.
 
 > Un navegador que pide `/` recibe la aplicación; Postman, curl o Cypress (que piden JSON) reciben el estado de la API como antes.
 
@@ -236,6 +255,30 @@ Las consultas `GET` usan un caché en memoria (estrategia *Cache-Aside*):
 
 > El caché vive en la memoria del proceso: se pierde al reiniciar y no se comparte entre varias instancias. Para producción con varias instancias se reemplazaría por Redis.
 
+## Seguridad
+
+**Lo que protege la app**
+
+- **Contraseñas con bcrypt** (10 rondas): en la base de datos nunca queda la contraseña real.
+- **Consultas parametrizadas** (`?` de `mysql2`) en todas las rutas: los datos del usuario no pueden inyectar SQL.
+- **Datos separados por usuario:** cada consulta filtra por el `usuario_id` del token, y el caché también se guarda por usuario.
+- **JWT con vencimiento de 2 horas.** El servidor no arranca si `JWT_SECRET` falta o tiene menos de 32 caracteres. Cambiar la contraseña o eliminar la cuenta pide la contraseña actual.
+- **CORS con lista blanca** (`ALLOWED_ORIGINS`), ver la sección *CORS*.
+- **Cabeceras de seguridad con `helmet`**, entre ellas una **Content-Security-Policy** que solo permite recursos propios, Google Fonts y el ícono `data:`. `/api-docs` tiene su propia CSP: permite Swagger UI desde jsDelivr y su script y estilo en línea mediante un *nonce* distinto en cada respuesta, sin `'unsafe-inline'`.
+- **Límite de intentos con `express-rate-limit`:** 5 intentos fallidos de login por IP y correo cada 15 minutos, y 10 registros por IP cada hora. Al pasarse, la API responde `429` con `{ "mensaje": "Demasiados intentos. Intenta de nuevo en unos minutos." }` y la pantalla de acceso muestra ese mensaje.
+- **Sin `innerHTML` en el frontend:** todo el texto se inserta con `textContent`, así que un dato guardado no puede convertirse en código.
+
+**Decisiones conscientes**
+
+- El registro responde `"El correo ya está registrado"`. Eso permite saber si un correo tiene cuenta, pero se mantiene por usabilidad: la persona entiende por qué no puede registrarse. Además hay pruebas (Jest y Cypress) que verifican ese mensaje. El límite de 10 registros por hora frena que se use para revisar correos en masa.
+- **Publicar siempre por HTTPS.** En producción la app debe servirse por HTTPS, porque el token viaja en cada petición. Render y Railway lo dan automáticamente; pon `TRUST_PROXY=true` para que la app vea la IP real detrás de su proxy.
+
+**Pendiente (mejoras futuras)**
+
+- Guardar la sesión en una **cookie `httpOnly`** en lugar de `localStorage`, para que un script no pueda leer el token.
+- **Verificación de correo** al registrarse.
+- **Recuperación de contraseña** por correo.
+
 ## Contrato de la API
 
 [`docs/openapi.json`](docs/openapi.json) describe los 27 endpoints (OpenAPI 3.1). La prueba `tests/contrato.test.js` falla si agregas una ruta al código sin documentarla, o si una respuesta real no cumple su esquema. Si agregas un endpoint, documéntalo en el contrato.
@@ -245,20 +288,23 @@ Las consultas `GET` usan un caché en memoria (estrategia *Cache-Aside*):
 ```
 financontrol-finanzas/
 ├── src/
-│   ├── config/database.js      # Conexión a MySQL
+│   ├── config/
+│   │   ├── database.js         # Conexión a MySQL
+│   │   └── seguridad.js        # Validación de JWT_SECRET y Content-Security-Policy
 │   ├── docs/swagger.js         # Documentación Swagger en /api-docs
 │   ├── middleware/
 │   │   ├── auth.js             # Middleware de verificación JWT
 │   │   ├── cache.js            # Caché en memoria por usuario (TTL, ETag, invalidación)
-│   │   └── cors.js             # CORS con lista blanca de orígenes
+│   │   ├── cors.js             # CORS con lista blanca de orígenes
+│   │   └── limites.js          # Límite de intentos en login y registro
 │   ├── routes/                 # perfil, movimientos, resumen, categorías y gestión del caché
 │   ├── services/compra.js      # Función calcularTotalCompra
 │   ├── utils/filtros.js        # Fechas, paginación y filtros compartidos
 │   ├── server.js               # App Express: usuarios, ingresos, gastos y saldo
-│   └── index.js                # Arranca el servidor
+│   └── index.js                # Valida JWT_SECRET y arranca el servidor
 ├── public/                     # Aplicación web (index.html, css/, js/)
-├── tests/                      # Jest: unitarias, flujo completo, contrato, CORS y docs
-├── cypress/e2e/                # Pruebas E2E de la API con cy.request()
+├── tests/                      # Jest: unitarias, flujo completo, contrato, CORS, docs y seguridad
+├── cypress/e2e/                # Pruebas E2E de la API (cy.request) y de la interfaz
 ├── docs/
 │   ├── openapi.json            # Contrato de la API
 │   └── schema.sql              # Esquema de la base de datos
@@ -275,7 +321,8 @@ financontrol-finanzas/
 | `Cannot find module ...` | No se instalaron las dependencias | Ejecuta `npm install` |
 | `ECONNREFUSED` o `Access denied for user` | MySQL apagado o credenciales incorrectas | Enciende MySQL (en WSL: `sudo service mysql start`) y revisa `DB_*` en `.env` |
 | `Table '...' doesn't exist` | Faltan las tablas | Ejecuta `docs/schema.sql` (paso 3) |
-| `secretOrPrivateKey must have a value` | Falta `JWT_SECRET` en `.env` | Agrégalo y reinicia |
+| `No se puede iniciar FinanControl: JWT_SECRET ...` | Falta `JWT_SECRET` o tiene menos de 32 caracteres | Genera uno con el comando del paso 4, ponlo en `.env` y reinicia |
+| `429 Demasiados intentos` en login o registro | Se pasó el límite de intentos (también le pasa a Cypress) | Espera unos minutos, o pon `RATE_LIMIT_DESACTIVADO=true` en `.env` para pruebas |
 | `EADDRINUSE` | El puerto ya está en uso | Cierra el otro servidor o cambia `PORT` en `.env` |
 | `.env` no existe | No se creó desde la plantilla | Repite el paso 4 |
 | Cypress no encuentra su programa | Falló la descarga al instalar | Ejecuta `npx cypress install` |
@@ -285,7 +332,7 @@ financontrol-finanzas/
 
 ## Tecnologías
 
-Node.js · Express 5 · MySQL (`mysql2`) · JWT (`jsonwebtoken`) · bcryptjs · dotenv · Jest · Supertest · Cypress
+Node.js · Express 5 · MySQL (`mysql2`) · JWT (`jsonwebtoken`) · bcryptjs · helmet · express-rate-limit · dotenv · Jest · Supertest · Cypress
 
 ## Equipo
 
