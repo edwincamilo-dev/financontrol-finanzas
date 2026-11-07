@@ -55,10 +55,10 @@ export async function render({ estado }) {
             ? h('section', { class: 'tarjeta' },
                 vacio('Tu libreta está en blanco', 'Registra tu primer ingreso o gasto y aquí verás tus gráficas.',
                     h('a', { class: 'btn btn-primario', href: '#/ingresos' }, 'Registrar mi primer ingreso')))
-            : h('div', { class: 'rejilla-dos' },
+            : h('div', { class: 'rejilla-dos rejilla-panel' },
                 h('section', { class: 'tarjeta' },
                     h('h3', null, `Ingresos y gastos de ${anio}`),
-                    barrasMensuales(mensual.meses, { anio })
+                    barrasMensuales(mensual.meses, { anio, alto: 350 })
                 ),
                 h('section', { class: 'tarjeta' },
                     h('h3', null, 'Gastos por categoría'),
@@ -71,7 +71,7 @@ export async function render({ estado }) {
         h('section', { class: 'tarjeta' },
             h('div', { class: 'tarjeta-cabecera' },
                 h('h3', null, 'Últimos movimientos'),
-                h('a', { class: 'enlace-subrayado', href: '#/movimientos' }, 'Ver todos')
+                recientes.items.length > 0 ? h('a', { class: 'enlace-subrayado', href: '#/movimientos' }, 'Ver todos') : null
             ),
             recientes.items.length === 0
                 ? vacio('Nada por aquí', 'Tus movimientos más recientes aparecerán en esta lista.')

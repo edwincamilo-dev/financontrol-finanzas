@@ -84,8 +84,8 @@ export async function render() {
     cargarEstadisticas();
 
     return h('div', { class: 'vista' },
-        h('header', { class: 'vista-cabecera' },
-            h('div', null, h('h2', null, 'Caché'), h('p', { class: 'sub' }, 'Las consultas GET se guardan en memoria por usuario y se invalidan al crear, editar o borrar datos.')),
+        h('header', { class: 'vista-cabecera cabecera-contexto' },
+            h('p', { class: 'sub' }, 'Las consultas GET se guardan en memoria por usuario y se invalidan al crear, editar o borrar datos.'),
             h('div', { class: 'acciones' }, botonVaciar)
         ),
         zonaEstadisticas,

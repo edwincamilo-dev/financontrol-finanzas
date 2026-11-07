@@ -151,8 +151,8 @@ export async function render() {
     cargarAnio();
 
     return h('div', { class: 'vista' },
-        h('header', { class: 'vista-cabecera' },
-            h('div', null, h('h2', null, 'Resumen'), h('p', { class: 'sub' }, 'Consulta tus totales por periodo y mes a mes.'))
+        h('header', { class: 'vista-cabecera cabecera-contexto' },
+            h('p', { class: 'sub' }, 'Consulta tus totales por periodo y mes a mes.')
         ),
         h('section', { class: 'tarjeta' },
             h('h3', null, 'Por periodo'),

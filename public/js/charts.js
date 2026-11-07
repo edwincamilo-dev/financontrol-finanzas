@@ -40,9 +40,9 @@ export function leyendaMensual() {
 // meses: [{ nombre, ingresos, gastos, saldo }] (12 elementos)
 // opciones.anio: si es el año en curso, el mes actual se marca con fondo amarillo muy claro.
 // opciones.leyenda: false cuando la leyenda va en la cabecera de la tarjeta.
-export function barrasMensuales(meses, { anio = new Date().getFullYear(), leyenda = true } = {}) {
+// opciones.alto: alto del dibujo (sobre un ancho de 560); más alto = gráfica más alta en pantalla.
+export function barrasMensuales(meses, { anio = new Date().getFullYear(), leyenda = true, alto = 280 } = {}) {
     const ancho = 560;
-    const alto = 280;
     const margen = { izquierda: 50, derecha: 6, arriba: 12, abajo: 30 };
     const areaAncho = ancho - margen.izquierda - margen.derecha;
     const areaAlto = alto - margen.arriba - margen.abajo;

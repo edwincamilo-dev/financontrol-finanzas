@@ -308,6 +308,9 @@ select {
 .vista { display: grid; gap: 24px; max-width: 1200px; margin: 0 auto; }
 .vista-cabecera { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; }
 .vista-cabecera .sub { margin-top: 6px; }
+/* Cabecera sin título (el título está en la barra superior): solo la línea de contexto y la acción */
+.cabecera-contexto { align-items: center; margin-top: -8px; }
+.vista-cabecera.cabecera-contexto .sub { margin-top: 0; }
 .sub { color: var(--texto-2); }
 .nota { color: var(--nota); font-size: 14px; }
 
@@ -327,6 +330,8 @@ select {
 .enlace-subrayado { font-weight: 600; text-decoration: underline 3px var(--mostaza); text-underline-offset: 6px; }
 
 .rejilla-dos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+/* Panel: cada tarjeta conserva su altura (la gráfica no se estira hasta la de categorías) */
+.rejilla-panel { align-items: start; }
 
 .valor { font: 800 30px/1.1 var(--f-titulo); letter-spacing: -.02em; overflow-wrap: anywhere; }
 .valor.ingreso { color: var(--ingreso); }
@@ -514,6 +519,7 @@ select {
 
 .figura { margin: 0; }
 .grafica { width: 100%; height: auto; max-height: 340px; display: block; }
+.rejilla-panel .grafica { max-height: 280px; }
 .grafica .guia { stroke: var(--renglon); stroke-width: 1; }
 .grafica .base { stroke: var(--tinta); stroke-width: 2; }
 .grafica .eje { fill: var(--nota); font: 500 12px var(--f-texto); }

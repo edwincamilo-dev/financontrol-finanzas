@@ -137,8 +137,8 @@ export async function render() {
     cargar();
 
     return h('div', { class: 'vista' },
-        h('header', { class: 'vista-cabecera' },
-            h('div', null, h('h2', null, 'Movimientos'), h('p', { class: 'sub' }, 'Todos tus ingresos y gastos, del más reciente al más antiguo.')),
+        h('header', { class: 'vista-cabecera cabecera-contexto' },
+            h('p', { class: 'sub' }, 'Todos tus ingresos y gastos, del más reciente al más antiguo.'),
             botonExportar
         ),
         h('section', { class: 'tarjeta', 'aria-label': 'Filtros' }, panelFiltros.nodo),

@@ -259,8 +259,9 @@ export function crearVista(config) {
             cargar();
 
             return h('div', { class: 'vista' },
-                h('header', { class: 'vista-cabecera' },
-                    h('div', null, h('h2', null, titulo), resumenLista),
+                // El título de la sección es el <h1> de la barra superior; aquí queda solo el contexto.
+                h('header', { class: 'vista-cabecera cabecera-contexto' },
+                    resumenLista,
                     h('button', { type: 'button', class: 'btn btn-primario', 'data-testid': 'btn-nuevo', onclick: () => abrirFormulario(null) },
                         icono('mas'), `Nuevo ${singular}`)
                 ),
