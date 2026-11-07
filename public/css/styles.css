@@ -194,7 +194,8 @@ small { color: var(--nota); font-size: 14px; }
 .barra-fecha { color: var(--nota); font-size: 14px; }
 .barra-fecha::first-letter { text-transform: uppercase; }
 .barra-derecha { display: flex; align-items: center; gap: 12px; }
-.menu-boton { display: none; }
+/* Mismo peso que .btn-icono para que no lo anule (va después en la hoja) */
+.btn-icono.menu-boton { display: none; }
 
 .avatar {
   display: inline-grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 50%;
@@ -832,7 +833,7 @@ select {
   }
   .app.menu-abierto .lateral { transform: none; box-shadow: 16px 0 40px rgb(20 33 61 / 30%); }
   .app.menu-abierto .fondo-menu { display: block; position: fixed; inset: 0; z-index: 20; background: rgb(20 33 61 / 55%); }
-  .menu-boton { display: inline-grid; }
+  .btn-icono.menu-boton { display: inline-grid; }
   .barra { padding: 10px 16px; gap: 10px; }
   .barra-titulo { font-size: 20px; }
   .usuario-nombre { display: none; }
